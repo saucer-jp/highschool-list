@@ -1,0 +1,5 @@
+# Auxiliary investigation outputs are useful locally but are not required by the public app.
+resources/highschool_stage19_coverage_report.md
+resources/highschool_stage19_quality_rollup.csv
+resources/highschool_stage19_naishin_classification_tasks.csv
+resources/saitama_nearby_highschools_departments_stage19_naishin_classified.csv
