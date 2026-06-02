@@ -1,6 +1,13 @@
 const DATA_URL = "resources/public_highschools.csv";
 const POSTAL_API = "https://geoapi.heartrails.com/api/json?method=searchByPostal&postal=";
 
+// スライダー範囲
+const DEV_MIN = 30;
+const DEV_MAX = 80;
+const NAISHIN_MIN = 0;
+const NAISHIN_MAX = 45;
+
+// URL に保存するキー（sector/gender は複数値なので別途処理）
 const stateKeys = [
   "q",
   "pref",
@@ -17,20 +24,34 @@ const stateKeys = [
   "dir",
 ];
 
+// 公私区分・共学区分の全選択肢
+const ALL_SECTORS = ["公立", "私立", "国立"];
+const ALL_GENDERS = ["共学", "男子校", "女子校"];
+
 const defaultState = {
   q: "",
   pref: "",
   city: "",
-  sector: "",
-  gender: "",
-  devMin: "",
-  devMax: "",
-  naishinMin: "",
-  naishinMax: "",
+  sector: ALL_SECTORS.join(","),  // デフォルト: 全選択
+  gender: ALL_GENDERS.join(","),  // デフォルト: 全選択
+  devMin: String(DEV_MIN),
+  devMax: String(DEV_MAX),
+  naishinMin: String(NAISHIN_MIN),
+  naishinMax: String(NAISHIN_MAX),
   naishinClass: "",
   postal: "",
   sort: "deviation",
   dir: "desc",
+};
+
+// ソートごとの順序ラベル
+const DIR_LABELS = {
+  deviation: { desc: "高い順", asc: "低い順" },
+  naishin:   { desc: "高い順", asc: "低い順" },
+  name:      { desc: "逆順",   asc: "あ→ん順" },
+  area:      { desc: "逆順",   asc: "あ→ん順" },
+  founded:   { desc: "新しい順", asc: "古い順" },
+  distance:  { desc: "遠い順", asc: "近い順" },
 };
 
 const els = {};
@@ -65,19 +86,29 @@ async function init() {
 }
 
 function cacheElements() {
-  for (const key of stateKeys) {
+  // 単一要素
+  for (const key of ["q", "pref", "city", "devMin", "devMax", "naishinMin", "naishinMax",
+                      "naishinClass", "postal", "sort", "dir"]) {
     els[key] = document.getElementById(key);
   }
-  els.filters = document.getElementById("filters");
-  els.cards = document.getElementById("cards");
-  els.status = document.getElementById("status");
-  els.recordCount = document.getElementById("recordCount");
-  els.schoolCount = document.getElementById("schoolCount");
+  // チェックグループ（NodeList）
+  els.sectorCheckboxes = document.querySelectorAll('input[name="sector"]');
+  els.genderCheckboxes = document.querySelectorAll('input[name="gender"]');
+
+  els.filters      = document.getElementById("filters");
+  els.cards        = document.getElementById("cards");
+  els.status       = document.getElementById("status");
+  els.recordCount  = document.getElementById("recordCount");
+  els.schoolCount  = document.getElementById("schoolCount");
   els.avgDeviation = document.getElementById("avgDeviation");
   els.naishinCount = document.getElementById("naishinCount");
-  els.visibleSummary = document.getElementById("visibleSummary");
-  els.copyUrlButton = document.getElementById("copyUrlButton");
-  els.resetButton = document.getElementById("resetButton");
+  els.visibleSummary  = document.getElementById("visibleSummary");
+  els.copyUrlButton   = document.getElementById("copyUrlButton");
+  els.resetButton     = document.getElementById("resetButton");
+  els.devRangeLabel    = document.getElementById("devRangeLabel");
+  els.naishinRangeLabel = document.getElementById("naishinRangeLabel");
+  els.devFill     = document.getElementById("devFill");
+  els.naishinFill = document.getElementById("naishinFill");
 }
 
 function initMap() {
@@ -90,8 +121,8 @@ function initMap() {
 }
 
 function bindEvents() {
-  els.filters.addEventListener("input", scheduleUpdate);
-  els.filters.addEventListener("change", scheduleUpdate);
+  els.filters.addEventListener("input", onFilterInput);
+  els.filters.addEventListener("change", onFilterChange);
   els.copyUrlButton.addEventListener("click", copyCurrentUrl);
   els.resetButton.addEventListener("click", async () => {
     applyState(defaultState);
@@ -107,11 +138,80 @@ function bindEvents() {
       marker.openPopup();
     }
   });
+
+  // スライダー同士の交差防止 & ラベル即時更新
+  els.devMin.addEventListener("input", () => clampSlider("dev"));
+  els.devMax.addEventListener("input", () => clampSlider("dev"));
+  els.naishinMin.addEventListener("input", () => clampSlider("naishin"));
+  els.naishinMax.addEventListener("input", () => clampSlider("naishin"));
+
+  // ソート変更で順序ラベル更新
+  els.sort.addEventListener("change", updateDirLabels);
+}
+
+function onFilterInput() {
+  updateRangeUI();
+  scheduleUpdate();
+}
+
+function onFilterChange() {
+  updateDirLabels();
+  scheduleUpdate();
 }
 
 function scheduleUpdate() {
   clearTimeout(filterTimer);
   filterTimer = setTimeout(() => update(), 180);
+}
+
+// スライダーの min/max を交差しないようにクランプし、UI更新
+function clampSlider(prefix) {
+  const minEl = els[`${prefix}Min`];
+  const maxEl = els[`${prefix}Max`];
+  let minVal = Number(minEl.value);
+  let maxVal = Number(maxEl.value);
+  if (minVal > maxVal) {
+    if (document.activeElement === minEl) {
+      maxEl.value = minVal;
+    } else {
+      minEl.value = maxVal;
+    }
+  }
+  updateRangeUI();
+}
+
+function updateRangeUI() {
+  // 偏差値
+  const dMin = Number(els.devMin.value);
+  const dMax = Number(els.devMax.value);
+  const dRange = DEV_MAX - DEV_MIN;
+  const dLeft  = ((dMin - DEV_MIN) / dRange) * 100;
+  const dRight = ((DEV_MAX - dMax) / dRange) * 100;
+  els.devFill.style.left  = `${dLeft}%`;
+  els.devFill.style.right = `${dRight}%`;
+  const devIsDefault = dMin === DEV_MIN && dMax === DEV_MAX;
+  els.devRangeLabel.textContent = devIsDefault ? "（全範囲）" : `${dMin} 〜 ${dMax}`;
+
+  // 内申点
+  const nMin = Number(els.naishinMin.value);
+  const nMax = Number(els.naishinMax.value);
+  const nRange = NAISHIN_MAX - NAISHIN_MIN;
+  const nLeft  = ((nMin - NAISHIN_MIN) / nRange) * 100;
+  const nRight = ((NAISHIN_MAX - nMax) / nRange) * 100;
+  els.naishinFill.style.left  = `${nLeft}%`;
+  els.naishinFill.style.right = `${nRight}%`;
+  const naishinIsDefault = nMin === NAISHIN_MIN && nMax === NAISHIN_MAX;
+  els.naishinRangeLabel.textContent = naishinIsDefault ? "（全範囲）" : `${nMin} 〜 ${nMax}`;
+}
+
+function updateDirLabels() {
+  const sort = els.sort.value;
+  const labels = DIR_LABELS[sort] || { desc: "降順", asc: "昇順" };
+  const opts = els.dir.options;
+  for (const opt of opts) {
+    if (opt.value === "desc") opt.textContent = labels.desc;
+    if (opt.value === "asc")  opt.textContent = labels.asc;
+  }
 }
 
 async function update(options = {}) {
@@ -137,7 +237,7 @@ function parseCsv(text) {
   let row = [];
   let field = "";
   let inQuotes = false;
-  const input = text.replace(/^\uFEFF/, "");
+  const input = text.replace(/^﻿/, "");
 
   for (let i = 0; i < input.length; i += 1) {
     const char = input[i];
@@ -205,9 +305,10 @@ function normalizeRow(row) {
 function populateFilters() {
   fillSelect(els.pref, "すべて", uniqueValues("都道府県"));
   fillSelect(els.city, "すべて", uniqueValues("市区町村"));
-  fillSelect(els.sector, "すべて", uniqueValues("公立/私立/国立"));
-  fillSelect(els.gender, "すべて", uniqueValues("共学/男子校/女子校"));
   fillSelect(els.naishinClass, "すべて", uniqueValues("内申点_classification"));
+  // 初期スライダー状態を反映
+  updateRangeUI();
+  updateDirLabels();
 }
 
 function fillSelect(select, emptyLabel, values) {
@@ -223,62 +324,116 @@ function uniqueValues(column) {
   );
 }
 
+// --- State 読み書き ---
+
 function readStateFromUrl() {
   const params = new URLSearchParams(location.search);
-  return Object.fromEntries(stateKeys.map((key) => [key, params.get(key) ?? defaultState[key]]));
+  return Object.fromEntries(
+    stateKeys.map((key) => [key, params.get(key) ?? defaultState[key]])
+  );
 }
 
 function applyState(state) {
-  for (const key of stateKeys) {
-    if (!els[key]) continue;
-    if (els[key].type === "checkbox") {
-      els[key].checked = state[key] === "1";
-    } else {
-      els[key].value = state[key] ?? defaultState[key] ?? "";
-    }
+  // テキスト系
+  for (const key of ["q", "pref", "city", "naishinClass", "postal", "sort", "dir"]) {
+    if (els[key]) els[key].value = state[key] ?? defaultState[key] ?? "";
   }
+
+  // チェックボックスグループ
+  const sectorSet = new Set((state.sector || "").split(",").filter(Boolean));
+  for (const cb of els.sectorCheckboxes) cb.checked = sectorSet.has(cb.value);
+
+  const genderSet = new Set((state.gender || "").split(",").filter(Boolean));
+  for (const cb of els.genderCheckboxes) cb.checked = genderSet.has(cb.value);
+
+  // スライダー（デフォルトは最広範囲）
+  els.devMin.value     = state.devMin     !== "" ? state.devMin     : DEV_MIN;
+  els.devMax.value     = state.devMax     !== "" ? state.devMax     : DEV_MAX;
+  els.naishinMin.value = state.naishinMin !== "" ? state.naishinMin : NAISHIN_MIN;
+  els.naishinMax.value = state.naishinMax !== "" ? state.naishinMax : NAISHIN_MAX;
+
+  updateRangeUI();
+  updateDirLabels();
 }
 
 function getState() {
-  return Object.fromEntries(
-    stateKeys.map((key) => {
-      const element = els[key];
-      return [key, element.type === "checkbox" ? (element.checked ? "1" : "") : element.value.trim()];
-    }),
-  );
+  // チェックボックスグループの値収集
+  const sector = [...els.sectorCheckboxes]
+    .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
+  const gender = [...els.genderCheckboxes]
+    .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
+
+  return {
+    q:            els.q.value.trim(),
+    pref:         els.pref.value,
+    city:         els.city.value,
+    sector,
+    gender,
+    devMin:       els.devMin.value,
+    devMax:       els.devMax.value,
+    naishinMin:   els.naishinMin.value,
+    naishinMax:   els.naishinMax.value,
+    naishinClass: els.naishinClass.value,
+    postal:       els.postal.value.trim(),
+    sort:         els.sort.value,
+    dir:          els.dir.value,
+  };
 }
 
 function writeStateToUrl(state) {
   const params = new URLSearchParams();
   for (const key of stateKeys) {
     const value = state[key];
-    if (value && value !== defaultState[key]) params.set(key, value);
+    if (!value) continue;
+    // デフォルト値は URL に含めない
+    if (key === "sector"     && value === defaultState.sector)  continue;
+    if (key === "gender"     && value === defaultState.gender)  continue;
+    if (key === "devMin"     && value === String(DEV_MIN))      continue;
+    if (key === "devMax"     && value === String(DEV_MAX))      continue;
+    if (key === "naishinMin" && value === String(NAISHIN_MIN))  continue;
+    if (key === "naishinMax" && value === String(NAISHIN_MAX))  continue;
+    if (key === "sort"       && value === defaultState.sort)    continue;
+    if (key === "dir"        && value === defaultState.dir)     continue;
+    params.set(key, value);
   }
   const query = params.toString();
   history.replaceState(null, "", query ? `${location.pathname}?${query}` : location.pathname);
 }
 
+// --- フィルター ---
+
 function filterRows(rows, state) {
   const query = state.q.toLowerCase();
-  const devMin = toNumber(state.devMin);
-  const devMax = toNumber(state.devMax);
-  const naishinMin = toNumber(state.naishinMin);
-  const naishinMax = toNumber(state.naishinMax);
+  const sectorSet = new Set((state.sector || "").split(",").filter(Boolean));
+  const genderSet = new Set((state.gender || "").split(",").filter(Boolean));
+
+  // スライダー: デフォルト値の場合は絞り込まない
+  const devMin    = Number(state.devMin);
+  const devMax    = Number(state.devMax);
+  const naishinMinVal = Number(state.naishinMin);
+  const naishinMaxVal = Number(state.naishinMax);
+  const devActive     = devMin !== DEV_MIN || devMax !== DEV_MAX;
+  const naishinActive = naishinMinVal !== NAISHIN_MIN || naishinMaxVal !== NAISHIN_MAX;
 
   return rows.filter((row) => {
     if (query && !row.searchable.includes(query)) return false;
     if (state.pref && row["都道府県"] !== state.pref) return false;
     if (state.city && row["市区町村"] !== state.city) return false;
-    if (state.sector && row["公立/私立/国立"] !== state.sector) return false;
-    if (state.gender && row["共学/男子校/女子校"] !== state.gender) return false;
+    // チェックが1つもない場合は絞り込まない（全選択も全未選択も全表示）
+    if (sectorSet.size > 0 && sectorSet.size < ALL_SECTORS.length && !sectorSet.has(row["公立/私立/国立"])) return false;
+    if (genderSet.size > 0 && genderSet.size < ALL_GENDERS.length && !genderSet.has(row["共学/男子校/女子校"])) return false;
     if (state.naishinClass && row["内申点_classification"] !== state.naishinClass) return false;
-    if (Number.isFinite(devMin) && (!Number.isFinite(row.deviation) || row.deviation < devMin)) return false;
-    if (Number.isFinite(devMax) && (!Number.isFinite(row.deviation) || row.deviation > devMax)) return false;
-    if (Number.isFinite(naishinMin) && (!Number.isFinite(row.naishin) || row.naishin < naishinMin)) return false;
-    if (Number.isFinite(naishinMax) && (!Number.isFinite(row.naishin) || row.naishin > naishinMax)) return false;
+    if (devActive) {
+      if (!Number.isFinite(row.deviation) || row.deviation < devMin || row.deviation > devMax) return false;
+    }
+    if (naishinActive) {
+      if (!Number.isFinite(row.naishin) || row.naishin < naishinMinVal || row.naishin > naishinMaxVal) return false;
+    }
     return true;
   });
 }
+
+// --- ソート ---
 
 function sortRows(rows, state) {
   const direction = state.dir === "asc" ? 1 : -1;
@@ -316,6 +471,8 @@ function compareNumber(a, b, direction) {
   if (!bValid) return -1;
   return (a - b) * direction;
 }
+
+// --- 郵便番号 ---
 
 async function resolvePostalPoint(postalInput) {
   const postal = normalizePostal(postalInput);
@@ -378,6 +535,8 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 function toRad(value) {
   return (value * Math.PI) / 180;
 }
+
+// --- レンダリング ---
 
 function renderSummary(rows) {
   const schools = new Set(rows.map((row) => row.school_id));

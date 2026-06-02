@@ -58,29 +58,37 @@
           <label for="city">市区町村</label>
           <select id="city" name="city"></select>
         </div>
-        <div class="field">
-          <label for="sector">公私区分</label>
-          <select id="sector" name="sector"></select>
+        <div class="field field-wide">
+          <span class="field-label">公私区分</span>
+          <div class="check-group" id="sectorGroup">
+            <label class="check-chip"><input type="checkbox" name="sector" value="公立"><span>公立</span></label>
+            <label class="check-chip"><input type="checkbox" name="sector" value="私立"><span>私立</span></label>
+            <label class="check-chip"><input type="checkbox" name="sector" value="国立"><span>国立</span></label>
+          </div>
         </div>
-        <div class="field">
-          <label for="gender">共学区分</label>
-          <select id="gender" name="gender"></select>
+        <div class="field field-wide">
+          <span class="field-label">共学区分</span>
+          <div class="check-group" id="genderGroup">
+            <label class="check-chip"><input type="checkbox" name="gender" value="共学"><span>共学</span></label>
+            <label class="check-chip"><input type="checkbox" name="gender" value="男子校"><span>男子校</span></label>
+            <label class="check-chip"><input type="checkbox" name="gender" value="女子校"><span>女子校</span></label>
+          </div>
         </div>
-        <div class="field">
-          <label for="devMin">偏差値下限</label>
-          <input id="devMin" name="devMin" type="number" min="0" max="100" inputmode="numeric">
+        <div class="field field-wide">
+          <label class="field-label">偏差値 <span id="devRangeLabel" class="range-label"></span></label>
+          <div class="dual-range" id="devRange">
+            <input id="devMin" name="devMin" type="range" min="30" max="80" step="1">
+            <input id="devMax" name="devMax" type="range" min="30" max="80" step="1">
+            <div class="dual-range-track"><div class="dual-range-fill" id="devFill"></div></div>
+          </div>
         </div>
-        <div class="field">
-          <label for="devMax">偏差値上限</label>
-          <input id="devMax" name="devMax" type="number" min="0" max="100" inputmode="numeric">
-        </div>
-        <div class="field">
-          <label for="naishinMin">内申点下限</label>
-          <input id="naishinMin" name="naishinMin" type="number" min="0" max="45" inputmode="numeric">
-        </div>
-        <div class="field">
-          <label for="naishinMax">内申点上限</label>
-          <input id="naishinMax" name="naishinMax" type="number" min="0" max="45" inputmode="numeric">
+        <div class="field field-wide">
+          <label class="field-label">内申点 <span id="naishinRangeLabel" class="range-label"></span></label>
+          <div class="dual-range" id="naishinRange">
+            <input id="naishinMin" name="naishinMin" type="range" min="0" max="45" step="1">
+            <input id="naishinMax" name="naishinMax" type="range" min="0" max="45" step="1">
+            <div class="dual-range-track"><div class="dual-range-fill" id="naishinFill"></div></div>
+          </div>
         </div>
         <div class="field field-wide">
           <label for="naishinClass">内申点分類</label>
@@ -104,17 +112,11 @@
         <div class="field">
           <label for="dir">順序</label>
           <select id="dir" name="dir">
-            <option value="desc">降順</option>
-            <option value="asc">昇順</option>
+            <option value="desc">高い順</option>
+            <option value="asc">低い順</option>
           </select>
         </div>
       </form>
-
-      <section class="notice" aria-labelledby="notice-title">
-        <h2 id="notice-title">利用上の注意</h2>
-        <p>このサイトは公開情報をもとに独自整理した参考情報です。偏差値・内申点・所在地は最新情報や公式情報と異なる場合があるため、受験判断では各校公式サイトと出典元を確認してください。</p>
-        <p>公開CSVには調査メモや作業ログを含めず、学校基本情報と出典リンクに必要な最小限の列だけを収録しています。地図上の位置と距離は学校所在地の正確な座標ではなく、HeartRails Geo API で作成した町域代表点から計算します。町域代表点が取得できない学校は地図と距離ソートの対象外です。</p>
-      </section>
 
       <p class="status" id="status" aria-live="polite">データを読み込んでいます。</p>
 
@@ -133,6 +135,11 @@
     </main>
 
     <footer class="app-footer">
+      <section class="notice" aria-labelledby="notice-title">
+        <h2 id="notice-title">利用上の注意</h2>
+        <p>このサイトは公開情報をもとに独自整理した参考情報です。偏差値・内申点・所在地は最新情報や公式情報と異なる場合があるため、受験判断では各校公式サイトと出典元を確認してください。</p>
+        <p>公開CSVには調査メモや作業ログを含めず、学校基本情報と出典リンクに必要な最小限の列だけを収録しています。地図上の位置と距離は学校所在地の正確な座標ではなく、HeartRails Geo API で作成した町域代表点から計算します。町域代表点が取得できない学校は地図と距離ソートの対象外です。</p>
+      </section>
       <p>学校データ出典はCSV内の出典リンクと <code>resources/highschool_sources_stage19.md</code> を参照。地図データ © OpenStreetMap contributors。</p>
       <p>郵便番号検索の出典: 「位置参照情報ダウンロードサービス」（国土交通省）を加工して作成。HeartRails Geo API を利用。</p>
     </footer>
