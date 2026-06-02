@@ -7,13 +7,14 @@ const DEV_MAX = 80;
 const NAISHIN_MIN = 0;
 const NAISHIN_MAX = 45;
 
-// URL に保存するキー（sector/gender は複数値なので別途処理）
+// URL に保存するキー（sector/gender/deptCat は複数値なので別途処理）
 const stateKeys = [
   "q",
   "pref",
   "city",
   "sector",
   "gender",
+  "deptCat",
   "devMin",
   "devMax",
   "naishinMin",
@@ -27,13 +28,24 @@ const stateKeys = [
 // 公私区分・共学区分の全選択肢
 const ALL_SECTORS = ["公立", "私立", "国立"];
 const ALL_GENDERS = ["共学", "男子校", "女子校"];
+const ALL_DEPT_CATS = ["普通科", "理数・情報系", "商業・外国語系", "芸術・体育・専門系"];
+
+// 学科名 → カテゴリのマッピング
+function deptCategory(deptName) {
+  if (!deptName) return "芸術・体育・専門系";
+  if (deptName.startsWith("普通科")) return "普通科";
+  if (["理数科", "理数科（先端サイエンス）", "情報処理科", "総合科学科（IG/SG）"].includes(deptName)) return "理数・情報系";
+  if (["商業科", "国際経済科", "外国語科", "外国語コース"].includes(deptName)) return "商業・外国語系";
+  return "芸術・体育・専門系";
+}
 
 const defaultState = {
   q: "",
   pref: "",
   city: "",
-  sector: ALL_SECTORS.join(","),  // デフォルト: 全選択
-  gender: ALL_GENDERS.join(","),  // デフォルト: 全選択
+  sector: ALL_SECTORS.join(","),   // デフォルト: 全選択
+  gender: ALL_GENDERS.join(","),   // デフォルト: 全選択
+  deptCat: ALL_DEPT_CATS.join(","), // デフォルト: 全選択
   devMin: String(DEV_MIN),
   devMax: String(DEV_MAX),
   naishinMin: String(NAISHIN_MIN),
@@ -92,8 +104,9 @@ function cacheElements() {
     els[key] = document.getElementById(key);
   }
   // チェックグループ（NodeList）
-  els.sectorCheckboxes = document.querySelectorAll('input[name="sector"]');
-  els.genderCheckboxes = document.querySelectorAll('input[name="gender"]');
+  els.sectorCheckboxes  = document.querySelectorAll('input[name="sector"]');
+  els.genderCheckboxes  = document.querySelectorAll('input[name="gender"]');
+  els.deptCatCheckboxes = document.querySelectorAll('input[name="deptCat"]');
 
   els.filters      = document.getElementById("filters");
   els.cards        = document.getElementById("cards");
@@ -352,6 +365,9 @@ function applyState(state) {
   const genderSet = new Set((state.gender || "").split(",").filter(Boolean));
   for (const cb of els.genderCheckboxes) cb.checked = genderSet.has(cb.value);
 
+  const deptCatSet = new Set((state.deptCat || "").split(",").filter(Boolean));
+  for (const cb of els.deptCatCheckboxes) cb.checked = deptCatSet.has(cb.value);
+
   // スライダー（デフォルトは最広範囲）
   els.devMin.value     = state.devMin     !== "" ? state.devMin     : DEV_MIN;
   els.devMax.value     = state.devMax     !== "" ? state.devMax     : DEV_MAX;
@@ -368,6 +384,8 @@ function getState() {
     .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
   const gender = [...els.genderCheckboxes]
     .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
+  const deptCat = [...els.deptCatCheckboxes]
+    .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
 
   return {
     q:            els.q.value.trim(),
@@ -375,6 +393,7 @@ function getState() {
     city:         els.city.value,
     sector,
     gender,
+    deptCat,
     devMin:       els.devMin.value,
     devMax:       els.devMax.value,
     naishinMin:   els.naishinMin.value,
@@ -392,8 +411,9 @@ function writeStateToUrl(state) {
     const value = state[key];
     if (!value) continue;
     // デフォルト値は URL に含めない
-    if (key === "sector"     && value === defaultState.sector)  continue;
-    if (key === "gender"     && value === defaultState.gender)  continue;
+    if (key === "sector"     && value === defaultState.sector)   continue;
+    if (key === "gender"     && value === defaultState.gender)   continue;
+    if (key === "deptCat"    && value === defaultState.deptCat)  continue;
     if (key === "devMin"     && value === String(DEV_MIN))      continue;
     if (key === "devMax"     && value === String(DEV_MAX))      continue;
     if (key === "naishinMin" && value === String(NAISHIN_MIN))  continue;
@@ -416,8 +436,9 @@ function writeStateToUrl(state) {
 
 function filterRows(rows, state) {
   const query = state.q.toLowerCase();
-  const sectorSet = new Set((state.sector || "").split(",").filter(Boolean));
-  const genderSet = new Set((state.gender || "").split(",").filter(Boolean));
+  const sectorSet  = new Set((state.sector  || "").split(",").filter(Boolean));
+  const genderSet  = new Set((state.gender  || "").split(",").filter(Boolean));
+  const deptCatSet = new Set((state.deptCat || "").split(",").filter(Boolean));
 
   // スライダー: デフォルト値の場合は絞り込まない
   const devMin    = Number(state.devMin);
@@ -434,6 +455,7 @@ function filterRows(rows, state) {
     // チェックが1つもない場合は絞り込まない（全選択も全未選択も全表示）
     if (sectorSet.size > 0 && sectorSet.size < ALL_SECTORS.length && !sectorSet.has(row["公立/私立/国立"])) return false;
     if (genderSet.size > 0 && genderSet.size < ALL_GENDERS.length && !genderSet.has(row["共学/男子校/女子校"])) return false;
+    if (deptCatSet.size > 0 && deptCatSet.size < ALL_DEPT_CATS.length && !deptCatSet.has(deptCategory(row["学科名"]))) return false;
     if (state.naishinClass && row["内申点_classification"] !== state.naishinClass) return false;
     if (devActive) {
       if (!Number.isFinite(row.deviation) || row.deviation < devMin || row.deviation > devMax) return false;
