@@ -147,6 +147,12 @@ function bindEvents() {
 
   // ソート変更で順序ラベル更新
   els.sort.addEventListener("change", updateDirLabels);
+
+  // ブラウザの進む/戻るでフィルター状態を復元
+  window.addEventListener("popstate", async () => {
+    applyState(readStateFromUrl());
+    await update({ preserveUrl: true });
+  });
 }
 
 function onFilterInput() {
@@ -397,7 +403,13 @@ function writeStateToUrl(state) {
     params.set(key, value);
   }
   const query = params.toString();
-  history.replaceState(null, "", query ? `${location.pathname}?${query}` : location.pathname);
+  const newUrl = query ? `${location.pathname}?${query}` : location.pathname;
+  // 現在のURLと同じ場合は replaceState（初回ロードや重複履歴を防ぐ）
+  if (newUrl !== location.pathname + location.search) {
+    history.pushState(null, "", newUrl);
+  } else {
+    history.replaceState(null, "", newUrl);
+  }
 }
 
 // --- フィルター ---
