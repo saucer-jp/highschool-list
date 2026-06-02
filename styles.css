@@ -368,9 +368,15 @@ select {
   align-items: start;
 }
 
-.results-panel,
+.results-panel {
+  min-width: 0;
+}
+
 .map-panel {
   min-width: 0;
+  position: sticky;
+  top: 1rem;
+  align-self: start;
 }
 
 .panel-header {
@@ -507,8 +513,6 @@ select {
 }
 
 #map {
-  position: sticky;
-  top: 1rem;
   height: min(720px, calc(100vh - 2rem));
   min-height: 420px;
   border: 1px solid var(--line);
@@ -545,9 +549,12 @@ select {
     grid-template-columns: 1fr;
   }
 
-  #map {
+  .map-panel {
     position: relative;
     top: auto;
+  }
+
+  #map {
     height: 460px;
   }
 }
