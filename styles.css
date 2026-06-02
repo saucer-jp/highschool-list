@@ -512,6 +512,57 @@ select {
   color: var(--accent);
 }
 
+/* ---------- アイコンのみのボタン（地図・お気に入り共通） ---------- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.icon-btn:active {
+  transform: scale(0.88);
+}
+
+.icon-btn:focus-visible {
+  outline: 3px solid #e0a11b;
+  outline-offset: 2px;
+}
+
+/* ---------- お気に入りボタン固有 ---------- */
+.fav-btn .fav-star-shape {
+  fill: none;
+}
+
+.fav-btn.is-fav {
+  border-color: #f0b429;
+  color: #f0b429;
+}
+
+.fav-btn.is-fav .fav-star-shape {
+  fill: #f0b429;
+}
+
+.fav-btn:hover .fav-star-shape {
+  fill: currentColor;
+  opacity: 0.15;
+}
+
 #map {
   height: min(720px, calc(100vh - 2rem));
   min-height: 420px;

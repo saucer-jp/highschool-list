@@ -23,7 +23,34 @@ const stateKeys = [
   "postal",
   "sort",
   "dir",
+  "favOnly",
 ];
+
+// ---------- お気に入り (localStorage) ----------
+const FAV_KEY = "highschool_favorites";
+
+function loadFavorites() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFavorites(set) {
+  localStorage.setItem(FAV_KEY, JSON.stringify([...set]));
+}
+
+function toggleFavorite(schoolId) {
+  const favs = loadFavorites();
+  if (favs.has(schoolId)) {
+    favs.delete(schoolId);
+  } else {
+    favs.add(schoolId);
+  }
+  saveFavorites(favs);
+  return favs.has(schoolId);
+}
 
 // 公私区分・共学区分の全選択肢
 const ALL_SECTORS = ["公立", "私立", "国立"];
@@ -54,6 +81,7 @@ const defaultState = {
   postal: "",
   sort: "deviation",
   dir: "desc",
+  favOnly: "",
 };
 
 // ソートごとの順序ラベル
@@ -108,6 +136,7 @@ function cacheElements() {
   els.genderCheckboxes  = document.querySelectorAll('input[name="gender"]');
   els.deptCatCheckboxes = document.querySelectorAll('input[name="deptCat"]');
 
+  els.favOnly      = document.getElementById("favOnly");
   els.filters      = document.getElementById("filters");
   els.cards        = document.getElementById("cards");
   els.status       = document.getElementById("status");
@@ -143,6 +172,19 @@ function bindEvents() {
     await update();
   });
   els.cards.addEventListener("click", (event) => {
+    // お気に入りトグル
+    const favBtn = event.target.closest("[data-fav-school]");
+    if (favBtn) {
+      const deptId = favBtn.dataset.favSchool;
+      const isFav = toggleFavorite(deptId);
+      favBtn.classList.toggle("is-fav", isFav);
+      favBtn.setAttribute("aria-label", isFav ? "お気に入り解除" : "お気に入りに追加");
+      favBtn.setAttribute("aria-pressed", String(isFav));
+      // お気に入りのみ表示中の場合は再描画
+      if (els.favOnly.checked) scheduleUpdate();
+      return;
+    }
+
     const button = event.target.closest("[data-focus-school]");
     if (!button) return;
     const marker = markerBySchoolId.get(button.dataset.focusSchool);
@@ -374,6 +416,9 @@ function applyState(state) {
   els.naishinMin.value = state.naishinMin !== "" ? state.naishinMin : NAISHIN_MIN;
   els.naishinMax.value = state.naishinMax !== "" ? state.naishinMax : NAISHIN_MAX;
 
+  // お気に入りのみ
+  els.favOnly.checked = state.favOnly === "1";
+
   updateRangeUI();
   updateDirLabels();
 }
@@ -402,6 +447,7 @@ function getState() {
     postal:       els.postal.value.trim(),
     sort:         els.sort.value,
     dir:          els.dir.value,
+    favOnly:      els.favOnly.checked ? "1" : "",
   };
 }
 
@@ -420,6 +466,7 @@ function writeStateToUrl(state) {
     if (key === "naishinMax" && value === String(NAISHIN_MAX))  continue;
     if (key === "sort"       && value === defaultState.sort)    continue;
     if (key === "dir"        && value === defaultState.dir)     continue;
+    if (key === "favOnly"    && !value)                         continue;
     params.set(key, value);
   }
   const query = params.toString();
@@ -457,6 +504,10 @@ function filterRows(rows, state) {
     if (genderSet.size > 0 && genderSet.size < ALL_GENDERS.length && !genderSet.has(row["共学/男子校/女子校"])) return false;
     if (deptCatSet.size > 0 && deptCatSet.size < ALL_DEPT_CATS.length && !deptCatSet.has(deptCategory(row["学科名"]))) return false;
     if (state.naishinClass && row["内申点_classification"] !== state.naishinClass) return false;
+    if (state.favOnly === "1") {
+      const favs = loadFavorites();
+      if (!favs.has(row.department_id)) return false;
+    }
     if (devActive) {
       if (!Number.isFinite(row.deviation) || row.deviation < devMin || row.deviation > devMax) return false;
     }
@@ -599,6 +650,7 @@ function createCard(row, index) {
   const distance = distanceFromPostal(row);
   const naishinLabel = row["内申点_app_display"] || row["内申点"] || row["内申点_classification"] || "-";
   const mapsUrl = buildMapsUrl(row);
+  const isFav = loadFavorites().has(row.department_id);
 
   card.innerHTML = `
     <div class="card-top">
@@ -609,7 +661,22 @@ function createCard(row, index) {
         </div>
         <p class="meta">${escapeHtml(row["学科名"])} / ${escapeHtml(row["課程"])} / ${escapeHtml(row["市区町村"])}</p>
       </div>
-      <button type="button" class="map-focus" data-focus-school="${escapeHtml(row.school_id)}">地図で見る</button>
+      <div style="display:flex;gap:0.4rem;align-items:center;">
+        <button type="button" class="icon-btn map-focus" data-focus-school="${escapeHtml(row.school_id)}" aria-label="地図で見る">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn fav-btn${isFav ? " is-fav" : ""}"
+          data-fav-school="${escapeHtml(row.department_id)}"
+          aria-label="${isFav ? "お気に入り解除" : "お気に入りに追加"}"
+          aria-pressed="${isFav}">
+          <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" class="fav-star-shape"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div class="badges">
       <span class="badge">${escapeHtml(row["公立/私立/国立"])}</span>
