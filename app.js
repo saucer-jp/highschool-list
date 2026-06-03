@@ -103,6 +103,8 @@ let postalPoint = null;
 let postalMessage = "";
 let postalCache = new Map();
 let filterTimer;
+let narrowWorkspaceQuery;
+let resultsScrollY = 0;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -140,6 +142,8 @@ function cacheElements() {
   els.filters      = document.getElementById("filters");
   els.cards        = document.getElementById("cards");
   els.status       = document.getElementById("status");
+  els.workspace    = document.querySelector(".workspace");
+  els.viewTabs     = document.querySelectorAll("[data-view-tab]");
   els.visibleSummary  = document.getElementById("visibleSummary");
   els.copyUrlButton   = document.getElementById("copyUrlButton");
   els.resetButton     = document.getElementById("resetButton");
@@ -161,6 +165,13 @@ function initMap() {
 function bindEvents() {
   els.filters.addEventListener("input", onFilterInput);
   els.filters.addEventListener("change", onFilterChange);
+  narrowWorkspaceQuery = window.matchMedia("(max-width: 1120px)");
+  narrowWorkspaceQuery.addEventListener("change", () => {
+    if (els.workspace.dataset.view === "map") invalidateMapSoon();
+  });
+  for (const tab of els.viewTabs) {
+    tab.addEventListener("click", () => setWorkspaceView(tab.dataset.viewTab));
+  }
   els.copyUrlButton.addEventListener("click", copyCurrentUrl);
   els.resetButton.addEventListener("click", async () => {
     applyState(defaultState);
@@ -185,6 +196,7 @@ function bindEvents() {
     if (!button) return;
     const marker = markerBySchoolId.get(button.dataset.focusSchool);
     if (marker) {
+      if (isNarrowWorkspace()) setWorkspaceView("map");
       map.setView(marker.getLatLng(), 14);
       marker.openPopup();
     }
@@ -203,6 +215,41 @@ function bindEvents() {
   window.addEventListener("popstate", async () => {
     applyState(readStateFromUrl());
     await update({ preserveUrl: true });
+  });
+}
+
+function setWorkspaceView(view) {
+  const nextView = view === "map" ? "map" : "results";
+  const currentView = els.workspace.dataset.view;
+  if (currentView === nextView) return;
+  if (currentView === "results") {
+    resultsScrollY = window.scrollY;
+  }
+  els.workspace.dataset.view = nextView;
+  for (const tab of els.viewTabs) {
+    const selected = tab.dataset.viewTab === nextView;
+    tab.classList.toggle("is-active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+  }
+  if (nextView === "map") invalidateMapSoon();
+  if (nextView === "results") restoreResultsScrollSoon();
+}
+
+function isNarrowWorkspace() {
+  return narrowWorkspaceQuery?.matches ?? window.matchMedia("(max-width: 1120px)").matches;
+}
+
+function invalidateMapSoon() {
+  requestAnimationFrame(() => {
+    map.invalidateSize();
+  });
+}
+
+function restoreResultsScrollSoon() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: resultsScrollY, behavior: "auto" });
+    });
   });
 }
 
