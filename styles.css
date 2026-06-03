@@ -472,6 +472,13 @@ select {
   font-size: 1rem;
 }
 
+.data-value-truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .meta {
   margin: 0.5rem 0 0;
   color: var(--muted);

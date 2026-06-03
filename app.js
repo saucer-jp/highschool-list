@@ -677,7 +677,7 @@ function createCard(row, index) {
     </div>
     <div class="data-grid">
       <div class="data-item"><span>偏差値</span><strong>${formatNumber(row.deviation)}</strong></div>
-      <div class="data-item"><span>内申点</span><strong>${escapeHtml(naishinLabel)}</strong></div>
+      <div class="data-item"><span>内申点</span><strong class="data-value-truncate" title="${escapeAttribute(naishinLabel)}">${escapeHtml(naishinLabel)}</strong></div>
       <div class="data-item"><span>距離</span><strong>${Number.isFinite(distance) ? `${distance.toFixed(1)} km` : "-"}</strong></div>
       <div class="data-item"><span>創立</span><strong>${Number.isFinite(row.founded) ? `${Math.round(row.founded)}年` : "-"}</strong></div>
     </div>
