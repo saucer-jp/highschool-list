@@ -671,7 +671,6 @@ function createCard(row, index) {
     <div class="badges">
       <span class="badge">${escapeHtml(row["学科名"])}</span>
       <span class="badge">${escapeHtml(row["課程"])}</span>
-      <span class="badge">${escapeHtml(row["市区町村"])}</span>
       <span class="badge">${escapeHtml(row["公立/私立/国立"])}</span>
       <span class="badge">${escapeHtml(row["共学/男子校/女子校"])}</span>
     </div>
