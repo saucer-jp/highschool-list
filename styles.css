@@ -8,7 +8,6 @@
   --line: #d9e0dc;
   --accent: #116a56;
   --accent-2: #245a9c;
-  --warn: #9a5a16;
   --danger: #a33b3b;
   --shadow: 0 12px 30px rgb(28 36 32 / 0.08);
 }
@@ -428,16 +427,6 @@ select {
   color: #294039;
   font-size: 0.78rem;
   font-weight: 700;
-}
-
-.badge.warn {
-  background: #fff2df;
-  color: var(--warn);
-}
-
-.badge.danger {
-  background: #fde8e8;
-  color: var(--danger);
 }
 
 .data-grid {

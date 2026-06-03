@@ -649,7 +649,6 @@ function createCard(row, index) {
           <h3>${escapeHtml(row["高校名"])}</h3>
           <span class="kana">${escapeHtml(row["高校名かな"])}</span>
         </div>
-        <p class="meta">${escapeHtml(row["学科名"])} / ${escapeHtml(row["課程"])} / ${escapeHtml(row["市区町村"])}</p>
       </div>
       <div style="display:flex;gap:0.4rem;align-items:center;">
         <button type="button" class="icon-btn map-focus" data-focus-school="${escapeHtml(row.school_id)}" aria-label="地図で見る">
@@ -669,10 +668,11 @@ function createCard(row, index) {
       </div>
     </div>
     <div class="badges">
+      <span class="badge">${escapeHtml(row["学科名"])}</span>
+      <span class="badge">${escapeHtml(row["課程"])}</span>
+      <span class="badge">${escapeHtml(row["市区町村"])}</span>
       <span class="badge">${escapeHtml(row["公立/私立/国立"])}</span>
       <span class="badge">${escapeHtml(row["共学/男子校/女子校"])}</span>
-      <span class="badge">${escapeHtml(row["内申点_classification"])}</span>
-      <span class="badge warn">町域代表点</span>
     </div>
     <div class="data-grid">
       <div class="data-item"><span>偏差値</span><strong>${formatNumber(row.deviation)}</strong></div>
