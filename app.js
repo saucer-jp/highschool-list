@@ -650,7 +650,7 @@ function createCard(row, index) {
           <span class="kana">${escapeHtml(row["高校名かな"])}</span>
         </div>
       </div>
-      <div style="display:flex;gap:0.4rem;align-items:center;">
+      <div class="card-actions">
         <button type="button" class="icon-btn map-focus" data-focus-school="${escapeHtml(row.school_id)}" aria-label="地図で見る">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>

@@ -394,6 +394,18 @@ select {
   align-items: flex-start;
 }
 
+.card-top > div:first-child {
+  min-width: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
 .school-title {
   display: flex;
   flex-wrap: wrap;
@@ -592,8 +604,7 @@ select {
     flex: 1 1 12rem;
   }
 
-  .filters,
-  .data-grid {
+  .filters {
     grid-template-columns: 1fr;
   }
 
@@ -601,9 +612,29 @@ select {
     grid-column: auto;
   }
 
-  .card-top,
   .panel-header {
     display: grid;
+  }
+
+  .card-top {
+    gap: 0.6rem;
+  }
+
+  .data-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .data-item {
+    padding: 0.45rem 0.35rem;
+  }
+
+  .data-item span {
+    font-size: 0.7rem;
+  }
+
+  .data-item strong {
+    font-size: 0.92rem;
   }
 
   #map {
