@@ -494,9 +494,10 @@ select {
 
 .sources a,
 .sources button {
-  min-height: 36px;
-  font-size: 0.84rem;
-  padding: 0.35rem 0.6rem;
+  min-height: 28px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  padding: 0.18rem 0.42rem;
 }
 
 .map-focus {
