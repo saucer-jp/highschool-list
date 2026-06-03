@@ -756,7 +756,7 @@ function buildMapsUrl(row) {
 }
 
 function buildStatusText(rows, state) {
-  const parts = [`${rows.length}件を表示中`];
+  const parts = [];
   const missingPoints = rows.filter((row) => !Number.isFinite(row.lat) || !Number.isFinite(row.lng)).length;
   if (postalPoint) parts.push(`距離基準: ${postalPoint.label}`);
   if (postalMessage) parts.push(postalMessage);
@@ -767,6 +767,7 @@ function buildStatusText(rows, state) {
 
 function setStatus(message, isError = false) {
   els.status.textContent = message;
+  els.status.hidden = !message;
   els.status.style.color = isError ? "var(--danger)" : "var(--muted)";
 }
 
