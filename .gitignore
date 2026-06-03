@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # Auxiliary investigation outputs are useful locally but are not required by the public app.
 resources/highschool_stage19_coverage_report.md
 resources/highschool_stage19_quality_rollup.csv
