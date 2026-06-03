@@ -649,6 +649,7 @@ function createCard(row, index) {
           <h3>${escapeHtml(row["高校名"])}</h3>
           <span class="kana">${escapeHtml(row["高校名かな"])}</span>
         </div>
+        <p class="school-address">${escapeHtml(row["住所"])}${row.postalAreaLabel ? ` / 地図位置: ${escapeHtml(row.postalAreaLabel)}` : ""}</p>
       </div>
       <div class="card-actions">
         <button type="button" class="icon-btn map-focus" data-focus-school="${escapeHtml(row.school_id)}" aria-label="地図で見る">
@@ -680,7 +681,6 @@ function createCard(row, index) {
       <div class="data-item"><span>距離</span><strong>${Number.isFinite(distance) ? `${distance.toFixed(1)} km` : "-"}</strong></div>
       <div class="data-item"><span>創立</span><strong>${Number.isFinite(row.founded) ? `${Math.round(row.founded)}年` : "-"}</strong></div>
     </div>
-    <p class="meta">${escapeHtml(row["住所"])}${row.postalAreaLabel ? ` / 地図位置: ${escapeHtml(row.postalAreaLabel)}` : ""}</p>
     <div class="sources">
       ${linkHtml(row["Webサイト"], "学校サイト")}
       ${linkHtml(row["偏差値出典"], "偏差値出典")}

@@ -422,6 +422,12 @@ select {
   font-size: 0.84rem;
 }
 
+.school-address {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;
