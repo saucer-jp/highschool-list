@@ -649,7 +649,7 @@ function createCard(row, index) {
           <h3>${escapeHtml(row["高校名"])}</h3>
           <span class="kana">${escapeHtml(row["高校名かな"])}</span>
         </div>
-        <p class="school-address">${escapeHtml(row["住所"])}${row.postalAreaLabel ? ` / 地図位置: ${escapeHtml(row.postalAreaLabel)}` : ""}</p>
+        <p class="school-address">${escapeHtml(row["住所"])}</p>
       </div>
       <div class="card-actions">
         <button type="button" class="icon-btn map-focus" data-focus-school="${escapeHtml(row.school_id)}" aria-label="地図で見る">
