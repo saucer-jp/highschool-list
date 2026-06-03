@@ -343,6 +343,7 @@ select {
   grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
   gap: 1rem;
   align-items: start;
+  margin-top: 1.25rem;
 }
 
 .results-panel {
@@ -364,9 +365,17 @@ select {
   margin-bottom: 0.75rem;
 }
 
+.panel-header h2 {
+  min-width: 0;
+  white-space: nowrap;
+}
+
 #visibleSummary {
   color: var(--muted);
   font-size: 0.92rem;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .cards {
@@ -627,7 +636,7 @@ select {
   }
 
   .panel-header {
-    display: grid;
+    display: flex;
   }
 
   .card-top {
