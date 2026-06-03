@@ -132,28 +132,6 @@ h1 {
   justify-content: flex-end;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.summary-grid article {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: var(--shadow);
-}
-
-.metric {
-  display: block;
-  font-size: 1.8rem;
-  font-weight: 800;
-  line-height: 1.15;
-}
-
 .filters {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -625,7 +603,6 @@ select {
     flex: 1 1 12rem;
   }
 
-  .summary-grid,
   .filters,
   .data-grid {
     grid-template-columns: 1fr;

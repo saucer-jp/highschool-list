@@ -140,10 +140,6 @@ function cacheElements() {
   els.filters      = document.getElementById("filters");
   els.cards        = document.getElementById("cards");
   els.status       = document.getElementById("status");
-  els.recordCount  = document.getElementById("recordCount");
-  els.schoolCount  = document.getElementById("schoolCount");
-  els.avgDeviation = document.getElementById("avgDeviation");
-  els.naishinCount = document.getElementById("naishinCount");
   els.visibleSummary  = document.getElementById("visibleSummary");
   els.copyUrlButton   = document.getElementById("copyUrlButton");
   els.resetButton     = document.getElementById("resetButton");
@@ -625,12 +621,6 @@ function toRad(value) {
 
 function renderSummary(rows) {
   const schools = new Set(rows.map((row) => row.school_id));
-  const deviations = rows.map((row) => row.deviation).filter(Number.isFinite);
-  const naishinRows = rows.filter((row) => row["内申点_classification"] === "取得済み");
-  els.recordCount.textContent = rows.length.toLocaleString("ja-JP");
-  els.schoolCount.textContent = schools.size.toLocaleString("ja-JP");
-  els.avgDeviation.textContent = deviations.length ? averageNumbers(deviations).toFixed(1) : "-";
-  els.naishinCount.textContent = naishinRows.length.toLocaleString("ja-JP");
   els.visibleSummary.textContent = `${rows.length}件 / ${schools.size}校`;
 }
 
