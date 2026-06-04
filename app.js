@@ -806,10 +806,10 @@ function createCard(row, index) {
       <div class="data-item"><span>創立</span><strong>${Number.isFinite(row.founded) ? `${Math.round(row.founded)}年` : "-"}</strong></div>
     </div>
     <div class="sources">
-      ${linkHtml(row["Webサイト"], "学校サイト")}
-      ${linkHtml(row["偏差値出典"], "偏差値出典")}
-      ${linkHtml(row["内申点_source_url"] || row["内申点出典"], "内申点出典")}
-      <a class="button-link" href="${escapeAttribute(mapsUrl)}" target="_blank" rel="noopener">Google Maps</a>
+      ${linkHtml(row["Webサイト"], "公式")}
+      ${linkHtml(row["偏差値出典"], "偏差出典")}
+      ${linkHtml(row["内申点_source_url"] || row["内申点出典"], "内申出典")}
+      <a class="button-link" href="${escapeAttribute(mapsUrl)}" target="_blank" rel="noopener">Google Map</a>
     </div>
   `;
 
