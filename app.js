@@ -105,6 +105,7 @@ let postalCache = new Map();
 let filterTimer;
 let narrowWorkspaceQuery;
 let resultsScrollY = 0;
+let filterDrawerLastFocus = null;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -140,6 +141,13 @@ function cacheElements() {
 
   els.favOnly      = document.getElementById("favOnly");
   els.filters      = document.getElementById("filters");
+  els.filterPanel  = document.getElementById("filterPanel");
+  els.filterDrawerButton = document.getElementById("filterDrawerButton");
+  els.filterCloseButton  = document.getElementById("filterCloseButton");
+  els.filterBackdrop     = document.getElementById("filterBackdrop");
+  els.contentPane  = document.getElementById("contentPane");
+  els.appHeader    = document.querySelector(".app-header");
+  els.appFooter    = document.querySelector(".app-footer");
   els.cards        = document.getElementById("cards");
   els.status       = document.getElementById("status");
   els.workspace    = document.querySelector(".workspace");
@@ -167,7 +175,15 @@ function bindEvents() {
   els.filters.addEventListener("change", onFilterChange);
   narrowWorkspaceQuery = window.matchMedia("(max-width: 1120px)");
   narrowWorkspaceQuery.addEventListener("change", () => {
+    syncFilterDrawerForViewport();
     if (els.workspace.dataset.view === "map") invalidateMapSoon();
+  });
+  syncFilterDrawerForViewport();
+  els.filterDrawerButton.addEventListener("click", openFilterDrawer);
+  els.filterCloseButton.addEventListener("click", closeFilterDrawer);
+  els.filterBackdrop.addEventListener("click", closeFilterDrawer);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isFilterDrawerOpen()) closeFilterDrawer();
   });
   for (const tab of els.viewTabs) {
     tab.addEventListener("click", () => setWorkspaceView(tab.dataset.viewTab));
@@ -237,6 +253,61 @@ function setWorkspaceView(view) {
 
 function isNarrowWorkspace() {
   return narrowWorkspaceQuery?.matches ?? window.matchMedia("(max-width: 1120px)").matches;
+}
+
+function isFilterDrawerOpen() {
+  return document.body.classList.contains("is-filter-drawer-open");
+}
+
+function openFilterDrawer() {
+  if (!isNarrowWorkspace() || isFilterDrawerOpen()) return;
+  filterDrawerLastFocus = document.activeElement;
+  document.body.classList.add("is-filter-drawer-open");
+  els.filterBackdrop.hidden = false;
+  els.filterDrawerButton.setAttribute("aria-expanded", "true");
+  els.filterPanel.inert = false;
+  els.filterPanel.setAttribute("role", "dialog");
+  els.filterPanel.setAttribute("aria-modal", "true");
+  setPageContentInert(true);
+  requestAnimationFrame(() => {
+    const focusTarget = els.filterPanel.querySelector("button, input, select, textarea, a[href]");
+    focusTarget?.focus();
+  });
+}
+
+function closeFilterDrawer(options = {}) {
+  const wasOpen = isFilterDrawerOpen();
+  document.body.classList.remove("is-filter-drawer-open");
+  els.filterBackdrop.hidden = true;
+  els.filterDrawerButton.setAttribute("aria-expanded", "false");
+  els.filterPanel.removeAttribute("role");
+  els.filterPanel.removeAttribute("aria-modal");
+  setPageContentInert(false);
+  syncFilterDrawerForViewport();
+  if (wasOpen && options.restoreFocus !== false && filterDrawerLastFocus?.focus) {
+    filterDrawerLastFocus.focus();
+  }
+  filterDrawerLastFocus = null;
+}
+
+function syncFilterDrawerForViewport() {
+  if (!isNarrowWorkspace()) {
+    document.body.classList.remove("is-filter-drawer-open");
+    els.filterBackdrop.hidden = true;
+    els.filterDrawerButton.setAttribute("aria-expanded", "false");
+    els.filterPanel.inert = false;
+    els.filterPanel.removeAttribute("role");
+    els.filterPanel.removeAttribute("aria-modal");
+    setPageContentInert(false);
+    return;
+  }
+  els.filterPanel.inert = !isFilterDrawerOpen();
+}
+
+function setPageContentInert(inert) {
+  els.appHeader.inert = inert;
+  els.contentPane.inert = inert;
+  els.appFooter.inert = inert;
 }
 
 function invalidateMapSoon() {

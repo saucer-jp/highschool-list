@@ -11,6 +11,8 @@
   --danger: #a33b3b;
   --shadow: 0 12px 30px rgb(28 36 32 / 0.08);
   --workspace-card-width: 500px;
+  --filter-panel-width: 320px;
+  --filter-panel-top-space: 12.875rem;
 }
 
 * {
@@ -23,6 +25,10 @@ body {
   color: var(--text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.6;
+}
+
+body.is-filter-drawer-open {
+  overflow: hidden;
 }
 
 a {
@@ -132,15 +138,52 @@ h1 {
   justify-content: flex-end;
 }
 
-.filters {
+.app-main {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: minmax(280px, var(--filter-panel-width)) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.filter-toggle,
+.filter-backdrop {
+  display: none;
+}
+
+.filter-panel {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100dvh - var(--filter-panel-top-space));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
+  scrollbar-gutter: stable;
+}
+
+.filter-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.filter-panel-header h2 {
+  font-size: 1.1rem;
+}
+
+#filterCloseButton {
+  display: none;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
 }
 
 .notice {
@@ -168,7 +211,7 @@ h1 {
 }
 
 .field-wide {
-  grid-column: span 2;
+  grid-column: auto;
 }
 
 label,
@@ -335,7 +378,7 @@ select {
 
 .status {
   min-height: 1.7rem;
-  margin: 0.8rem 0;
+  margin: 0 0 0.8rem;
   color: var(--muted);
 }
 
@@ -345,7 +388,10 @@ select {
   grid-template-columns: var(--workspace-card-width) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
-  margin-top: 1.25rem;
+}
+
+.content-pane {
+  min-width: 0;
 }
 
 .view-tabs {
@@ -603,8 +649,51 @@ select {
 }
 
 @media (max-width: 1120px) {
-  .filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .app-main {
+    display: block;
+  }
+
+  .filter-toggle {
+    position: sticky;
+    top: 0;
+    z-index: 850;
+    display: inline-flex;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow);
+  }
+
+  .filter-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 950;
+    display: block;
+    background: rgb(28 36 32 / 0.48);
+  }
+
+  .filter-backdrop[hidden] {
+    display: none;
+  }
+
+  .filter-panel {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1000;
+    width: min(22rem, calc(100dvw - 2rem));
+    max-height: none;
+    border-block: 0;
+    border-inline-start: 0;
+    border-radius: 0 8px 8px 0;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+  }
+
+  body.is-filter-drawer-open .filter-panel {
+    transform: translateX(0);
+  }
+
+  #filterCloseButton {
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .workspace {
@@ -655,6 +744,12 @@ select {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .filter-panel {
+    transition: none;
+  }
+}
+
 @media (max-width: 720px) {
   .app-header {
     min-height: 0;
@@ -668,14 +763,6 @@ select {
 
   .header-actions button {
     flex: 1 1 12rem;
-  }
-
-  .filters {
-    grid-template-columns: 1fr;
-  }
-
-  .field-wide {
-    grid-column: auto;
   }
 
   .panel-header {
