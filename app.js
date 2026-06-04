@@ -19,7 +19,6 @@ const stateKeys = [
   "devMax",
   "naishinMin",
   "naishinMax",
-  "naishinClass",
   "postal",
   "sort",
   "dir",
@@ -77,7 +76,6 @@ const defaultState = {
   devMax: String(DEV_MAX),
   naishinMin: String(NAISHIN_MIN),
   naishinMax: String(NAISHIN_MAX),
-  naishinClass: "",
   postal: "",
   sort: "deviation",
   dir: "desc",
@@ -131,7 +129,7 @@ async function init() {
 function cacheElements() {
   // 単一要素
   for (const key of ["q", "pref", "city", "devMin", "devMax", "naishinMin", "naishinMax",
-                      "naishinClass", "postal", "sort", "dir"]) {
+                      "postal", "sort", "dir"]) {
     els[key] = document.getElementById(key);
   }
   // チェックグループ（NodeList）
@@ -480,7 +478,6 @@ function normalizeRow(row) {
 function populateFilters() {
   fillSelect(els.pref, "すべて", uniqueValues("都道府県"));
   fillSelect(els.city, "すべて", uniqueValues("市区町村"));
-  fillSelect(els.naishinClass, "すべて", uniqueValues("内申点_classification"));
   // 初期スライダー状態を反映
   updateRangeUI();
   updateDirLabels();
@@ -510,7 +507,7 @@ function readStateFromUrl() {
 
 function applyState(state) {
   // テキスト系
-  for (const key of ["q", "pref", "city", "naishinClass", "postal", "sort", "dir"]) {
+  for (const key of ["q", "pref", "city", "postal", "sort", "dir"]) {
     if (els[key]) els[key].value = state[key] ?? defaultState[key] ?? "";
   }
 
@@ -557,7 +554,6 @@ function getState() {
     devMax:       els.devMax.value,
     naishinMin:   els.naishinMin.value,
     naishinMax:   els.naishinMax.value,
-    naishinClass: els.naishinClass.value,
     postal:       els.postal.value.trim(),
     sort:         els.sort.value,
     dir:          els.dir.value,
@@ -617,7 +613,6 @@ function filterRows(rows, state) {
     if (sectorSet.size > 0 && sectorSet.size < ALL_SECTORS.length && !sectorSet.has(row["公立/私立/国立"])) return false;
     if (genderSet.size > 0 && genderSet.size < ALL_GENDERS.length && !genderSet.has(row["共学/男子校/女子校"])) return false;
     if (deptCatSet.size > 0 && deptCatSet.size < ALL_DEPT_CATS.length && !deptCatSet.has(deptCategory(row["学科名"]))) return false;
-    if (state.naishinClass && row["内申点_classification"] !== state.naishinClass) return false;
     if (state.favOnly === "1") {
       const favs = loadFavorites();
       if (!favs.has(row.department_id)) return false;

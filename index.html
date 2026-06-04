@@ -9,7 +9,7 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=7">
   </head>
   <body>
     <a class="skip-link" href="#results">結果へ移動</a>
@@ -41,13 +41,15 @@
             <label for="q">キーワード</label>
             <input id="q" name="q" type="search" placeholder="高校名・学科・住所" enterkeyhint="search">
           </div>
-          <div class="field">
-            <label for="pref">都道府県</label>
-            <select id="pref" name="pref"></select>
-          </div>
-          <div class="field">
-            <label for="city">市区町村</label>
-            <select id="city" name="city"></select>
+          <div class="field-row">
+            <div class="field">
+              <label for="pref">都道府県</label>
+              <select id="pref" name="pref"></select>
+            </div>
+            <div class="field">
+              <label for="city">市区町村</label>
+              <select id="city" name="city"></select>
+            </div>
           </div>
           <div class="field field-wide">
             <span class="field-label">学科カテゴリ</span>
@@ -64,20 +66,22 @@
               <label class="check-chip"><input type="checkbox" name="favOnly" id="favOnly"><span>★ お気に入りのみ</span></label>
             </div>
           </div>
-          <div class="field field-wide">
-            <span class="field-label">公私区分</span>
-            <div class="check-group" id="sectorGroup">
-              <label class="check-chip"><input type="checkbox" name="sector" value="公立"><span>公立</span></label>
-              <label class="check-chip"><input type="checkbox" name="sector" value="私立"><span>私立</span></label>
-              <label class="check-chip"><input type="checkbox" name="sector" value="国立"><span>国立</span></label>
+          <div class="field-row">
+            <div class="field">
+              <span class="field-label">公私区分</span>
+              <div class="check-group compact-check-group" id="sectorGroup">
+                <label class="check-chip"><input type="checkbox" name="sector" value="公立"><span>公立</span></label>
+                <label class="check-chip"><input type="checkbox" name="sector" value="私立"><span>私立</span></label>
+                <label class="check-chip"><input type="checkbox" name="sector" value="国立"><span>国立</span></label>
+              </div>
             </div>
-          </div>
-          <div class="field field-wide">
-            <span class="field-label">共学区分</span>
-            <div class="check-group" id="genderGroup">
-              <label class="check-chip"><input type="checkbox" name="gender" value="共学"><span>共学</span></label>
-              <label class="check-chip"><input type="checkbox" name="gender" value="男子校"><span>男子校</span></label>
-              <label class="check-chip"><input type="checkbox" name="gender" value="女子校"><span>女子校</span></label>
+            <div class="field">
+              <span class="field-label">共学区分</span>
+              <div class="check-group compact-check-group" id="genderGroup">
+                <label class="check-chip"><input type="checkbox" name="gender" value="共学"><span>共学</span></label>
+                <label class="check-chip"><input type="checkbox" name="gender" value="男子校"><span>男子校</span></label>
+                <label class="check-chip"><input type="checkbox" name="gender" value="女子校"><span>女子校</span></label>
+              </div>
             </div>
           </div>
           <div class="field field-wide">
@@ -96,31 +100,29 @@
               <div class="dual-range-track"><div class="dual-range-fill" id="naishinFill"></div></div>
             </div>
           </div>
-          <div class="field field-wide">
-            <label for="naishinClass">内申点分類</label>
-            <select id="naishinClass" name="naishinClass"></select>
-          </div>
           <div class="field">
             <label for="postal">基準郵便番号</label>
             <input id="postal" name="postal" type="text" inputmode="numeric" pattern="[0-9-]{7,8}" placeholder="3300834" autocomplete="postal-code">
           </div>
-          <div class="field">
-            <label for="sort">ソート</label>
-            <select id="sort" name="sort">
-              <option value="deviation">偏差値</option>
-              <option value="naishin">内申点</option>
-              <option value="name">学校名</option>
-              <option value="area">地域</option>
-              <option value="founded">創立年</option>
-              <option value="distance">距離</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="dir">順序</label>
-            <select id="dir" name="dir">
-              <option value="desc">高い順</option>
-              <option value="asc">低い順</option>
-            </select>
+          <div class="field-row">
+            <div class="field">
+              <label for="sort">ソート</label>
+              <select id="sort" name="sort">
+                <option value="deviation">偏差値</option>
+                <option value="naishin">内申点</option>
+                <option value="name">学校名</option>
+                <option value="area">地域</option>
+                <option value="founded">創立年</option>
+                <option value="distance">距離</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dir">順序</label>
+              <select id="dir" name="dir">
+                <option value="desc">高い順</option>
+                <option value="asc">低い順</option>
+              </select>
+            </div>
           </div>
         </form>
       </aside>
