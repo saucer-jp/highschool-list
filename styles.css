@@ -290,27 +290,28 @@ select {
 .check-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.2rem;
   min-height: 38px;
   align-items: center;
 }
 
 .compact-check-group {
-  gap: 0.18rem;
+  gap: 0.2rem;
   align-content: start;
+  flex-wrap: nowrap;
 }
 
 .check-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  min-height: 30px;
-  padding: 0.2rem 0.55rem;
+  gap: 0.18rem;
+  min-height: 28px;
+  padding: 0.12rem 0.32rem;
   border: 1px solid #b9c5bf;
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.25;
   color: var(--text);
@@ -319,10 +320,6 @@ select {
 }
 
 .compact-check-group .check-chip {
-  gap: 0.18rem;
-  min-height: 28px;
-  padding-inline: 0.32rem;
-  font-size: 0.78rem;
   white-space: nowrap;
 }
 
@@ -858,16 +855,7 @@ select {
     min-height: 360px;
   }
 
-  /* チェックチップはモバイルでも横並びだが小さめに */
-  .check-chip {
-    font-size: 0.8rem;
-    padding: 0.18rem 0.48rem;
-  }
-
-  .compact-check-group .check-chip {
-    font-size: 0.78rem;
-    padding-inline: 0.32rem;
-  }
+  /* チェックチップはモバイルでも横並び */
 
   /* スライダーのサムをタップしやすく */
   .dual-range input[type="range"]::-webkit-slider-thumb {
