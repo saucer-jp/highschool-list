@@ -9,7 +9,7 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=5">
   </head>
   <body>
     <a class="skip-link" href="#results">結果へ移動</a>
@@ -21,7 +21,6 @@
       </div>
       <div class="header-actions">
         <button type="button" id="copyUrlButton">共有URLをコピー</button>
-        <button type="button" id="resetButton" class="secondary">条件をリセット</button>
       </div>
     </header>
 
@@ -32,7 +31,10 @@
       <aside class="filter-panel" id="filterPanel" aria-label="絞り込み条件">
         <div class="filter-panel-header">
           <h2>絞り込み</h2>
-          <button type="button" id="filterCloseButton" class="secondary">閉じる</button>
+          <div class="filter-panel-actions">
+            <button type="button" id="filterCloseButton" class="secondary">閉じる</button>
+            <button type="button" id="resetButton" class="text-button">条件をリセット</button>
+          </div>
         </div>
         <form id="filters" class="filters" autocomplete="off">
           <div class="field field-wide">
