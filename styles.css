@@ -340,7 +340,7 @@ select {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
+  grid-template-columns: 500px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   margin-top: 1.25rem;
