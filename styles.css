@@ -10,6 +10,7 @@
   --accent-2: #245a9c;
   --danger: #a33b3b;
   --shadow: 0 12px 30px rgb(28 36 32 / 0.08);
+  --workspace-card-width: 500px;
 }
 
 * {
@@ -340,21 +341,25 @@ select {
 
 .workspace {
   display: grid;
-  grid-template-columns: 500px minmax(0, 1fr);
+  grid-template-areas: "results map";
+  grid-template-columns: var(--workspace-card-width) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   margin-top: 1.25rem;
 }
 
 .view-tabs {
+  grid-area: tabs;
   display: none;
 }
 
 .results-panel {
+  grid-area: results;
   min-width: 0;
 }
 
 .map-panel {
+  grid-area: map;
   min-width: 0;
   position: sticky;
   top: 1rem;
@@ -603,6 +608,10 @@ select {
   }
 
   .workspace {
+    grid-template-areas:
+      "tabs"
+      "results"
+      "map";
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
