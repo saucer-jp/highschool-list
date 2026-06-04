@@ -150,6 +150,7 @@ function cacheElements() {
   els.status       = document.getElementById("status");
   els.workspace    = document.querySelector(".workspace");
   els.viewTabs     = document.querySelectorAll("[data-view-tab]");
+  els.distanceBasis   = document.getElementById("distanceBasis");
   els.visibleSummary  = document.getElementById("visibleSummary");
   els.copyUrlButton   = document.getElementById("copyUrlButton");
   els.resetButton     = document.getElementById("resetButton");
@@ -398,6 +399,7 @@ async function update(options = {}) {
 
   const filtered = sortRows(filterRows(allRows, state), state);
   renderSummary(filtered);
+  renderDistanceBasis();
   renderCards(filtered);
   renderMap(filtered);
 
@@ -737,6 +739,16 @@ function renderSummary(rows) {
   els.visibleSummary.textContent = `${rows.length}件 / ${schools.size}校`;
 }
 
+function renderDistanceBasis() {
+  if (postalPoint) {
+    els.distanceBasis.textContent = `距離基準: ${postalPoint.label}`;
+    els.distanceBasis.hidden = false;
+    return;
+  }
+  els.distanceBasis.textContent = "";
+  els.distanceBasis.hidden = true;
+}
+
 function renderCards(rows) {
   if (!rows.length) {
     els.cards.replaceChildren(emptyMessage("条件に一致する高校がありません。"));
@@ -870,7 +882,6 @@ function buildMapsUrl(row) {
 function buildStatusText(rows, state) {
   const parts = [];
   const missingPoints = rows.filter((row) => !Number.isFinite(row.lat) || !Number.isFinite(row.lng)).length;
-  if (postalPoint) parts.push(`距離基準: ${postalPoint.label}`);
   if (postalMessage) parts.push(postalMessage);
   if (missingPoints) parts.push(`町域代表点なし: ${missingPoints}件`);
   if (state.sort === "distance" && !postalPoint && !postalMessage) parts.push("距離ソートには7桁の郵便番号が必要です");

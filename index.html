@@ -9,23 +9,31 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
   </head>
   <body>
     <a class="skip-link" href="#results">結果へ移動</a>
     <header class="app-header">
       <div>
-        <p class="eyebrow">Saitama High School Finder</p>
         <h1>埼玉県・近隣高校リスト</h1>
         <p class="lead">学科・コース単位の偏差値、内申点、所在地を比較できます。</p>
       </div>
       <div class="header-actions">
-        <button type="button" id="copyUrlButton">共有URLをコピー</button>
+        <button
+          type="button"
+          id="copyUrlButton"
+          class="icon-btn header-copy-btn"
+          aria-label="共有URLをコピー"
+          title="共有URLをコピー">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1Zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H10V7h9v14Z"/>
+          </svg>
+          <span class="sr-only">共有URLをコピー</span>
+        </button>
       </div>
     </header>
 
     <main id="content" class="app-main" tabindex="-1">
-      <button type="button" id="filterDrawerButton" class="filter-toggle" aria-expanded="false" aria-controls="filterPanel">絞り込み</button>
       <div id="filterBackdrop" class="filter-backdrop" hidden></div>
 
       <aside class="filter-panel" id="filterPanel" aria-label="絞り込み条件">
@@ -132,12 +140,14 @@
 
         <section class="workspace" aria-label="高校一覧と地図" data-view="results">
           <div class="view-tabs" role="tablist" aria-label="表示切り替え">
+            <button type="button" id="filterDrawerButton" class="filter-toggle" aria-expanded="false" aria-controls="filterPanel">絞り込み</button>
             <button type="button" id="resultsTab" class="view-tab is-active" role="tab" aria-selected="true" aria-controls="resultsPanel" data-view-tab="results">一覧</button>
             <button type="button" id="mapTab" class="view-tab" role="tab" aria-selected="false" aria-controls="mapPanel" data-view-tab="map">地図</button>
           </div>
           <div class="results-panel" id="resultsPanel" role="tabpanel" aria-labelledby="resultsTab">
             <div class="panel-header">
               <h2 id="results">検索結果</h2>
+              <span id="distanceBasis"></span>
               <span id="visibleSummary"></span>
             </div>
             <div id="cards" class="cards" aria-live="polite"></div>

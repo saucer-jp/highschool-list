@@ -113,21 +113,12 @@ main,
 }
 
 .app-header {
-  min-height: 190px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: start;
   gap: 1.5rem;
   padding: 2rem 0 1.25rem;
-}
-
-.eyebrow {
-  margin: 0 0 0.35rem;
-  color: var(--accent);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 h1,
@@ -138,20 +129,47 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(2rem, 4vw, 4rem);
+  font-size: 32px;
 }
 
 .lead {
   margin: 0.75rem 0 0;
   color: var(--muted);
+  font-size: 0.75rem;
   max-width: 42rem;
 }
 
 .header-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
   justify-content: flex-end;
+  align-self: start;
+  padding-top: 0.25rem;
+}
+
+.header-copy-btn {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.header-copy-btn svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .app-main {
@@ -471,6 +489,12 @@ select {
   white-space: nowrap;
 }
 
+#distanceBasis {
+  color: var(--muted);
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
 #visibleSummary {
   color: var(--muted);
   font-size: 0.92rem;
@@ -700,12 +724,15 @@ select {
   }
 
   .filter-toggle {
-    position: sticky;
-    top: 0;
-    z-index: 850;
     display: inline-flex;
-    margin-bottom: 0.75rem;
-    box-shadow: var(--shadow);
+    width: min-content;
+    white-space: nowrap;
+    justify-self: start;
+    min-height: 42px;
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: none;
   }
 
   .filter-backdrop {
@@ -756,7 +783,7 @@ select {
     top: 0;
     z-index: 900;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: min-content 1fr 1fr;
     gap: 0.35rem;
     padding: 0.5rem 0;
     background: var(--bg);
@@ -798,17 +825,8 @@ select {
 
 @media (max-width: 720px) {
   .app-header {
-    min-height: 0;
-    display: grid;
-    align-items: start;
-  }
-
-  .header-actions {
-    justify-content: stretch;
-  }
-
-  .header-actions button {
-    flex: 1 1 12rem;
+    gap: 1rem;
+    padding-top: 1.5rem;
   }
 
   .panel-header {
