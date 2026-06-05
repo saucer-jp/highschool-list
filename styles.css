@@ -276,13 +276,45 @@ h1 {
 
 .favorite-editor-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 0.45rem;
   align-items: end;
   padding: 0.65rem;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f8faf8;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+
+.favorite-editor-item.dragging {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.grip-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  align-self: center;
+}
+
+.grip-handle:hover {
+  color: var(--accent);
+  background: var(--surface-2);
+}
+
+.grip-handle:active {
+  cursor: grabbing;
 }
 
 .favorite-name-field {
@@ -1066,11 +1098,11 @@ select {
   }
 
   .favorite-editor-item {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .favorite-editor-item .danger-text {
-    grid-column: 1 / -1;
+    grid-column: 2 / -1;
     justify-self: start;
   }
 

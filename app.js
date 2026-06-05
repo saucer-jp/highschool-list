@@ -746,8 +746,16 @@ function renderFavoriteEditor() {
     const item = document.createElement("div");
     item.className = "favorite-editor-item";
     item.dataset.favoriteListId = list.id;
+    item.draggable = true;
     const inputId = `favorite-name-${list.id}`;
     item.innerHTML = `
+      <button type="button" class="grip-handle" aria-label="ドラッグして並べ替え" tabindex="0" data-grip="${escapeAttribute(list.id)}">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <rect x="4" y="3" width="2" height="2" rx="1"/><rect x="10" y="3" width="2" height="2" rx="1"/>
+          <rect x="4" y="7" width="2" height="2" rx="1"/><rect x="10" y="7" width="2" height="2" rx="1"/>
+          <rect x="4" y="11" width="2" height="2" rx="1"/><rect x="10" y="11" width="2" height="2" rx="1"/>
+        </svg>
+      </button>
       <div class="favorite-name-field">
         <label for="${escapeAttribute(inputId)}">名前</label>
         <input id="${escapeAttribute(inputId)}" type="text" value="${escapeAttribute(list.name)}" data-favorite-name="${escapeAttribute(list.id)}" maxlength="40">
@@ -757,6 +765,117 @@ function renderFavoriteEditor() {
     `;
     return item;
   }));
+
+  initFavoriteEditorDragSort();
+}
+
+// ---------- お気に入りエディタ ドラッグ並べ替え ----------
+let dragSrc = null;
+let dragSortAbortController = null;
+
+function initFavoriteEditorDragSort() {
+  // 前回のリスナーをクリーンアップ
+  dragSortAbortController?.abort();
+  dragSortAbortController = new AbortController();
+  const signal = dragSortAbortController.signal;
+
+  const container = els.favoriteListEditor;
+
+  // マウス用 HTML5 DnD
+  container.addEventListener("dragstart", onDragStart, { signal });
+  container.addEventListener("dragover", onDragOver, { signal });
+  container.addEventListener("drop", onDrop, { signal });
+  container.addEventListener("dragend", onDragEnd, { signal });
+
+  // タッチ用
+  container.addEventListener("touchstart", onTouchStart, { passive: true, signal });
+
+  function itemOf(el) { return el?.closest(".favorite-editor-item"); }
+
+  function onDragStart(e) {
+    dragSrc = itemOf(e.target);
+    if (!dragSrc) return;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", dragSrc.dataset.favoriteListId);
+    requestAnimationFrame(() => dragSrc?.classList.add("dragging"));
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const over = itemOf(e.target);
+    if (!over || over === dragSrc) return;
+    const items = [...container.querySelectorAll(".favorite-editor-item")];
+    const srcIdx = items.indexOf(dragSrc);
+    const overIdx = items.indexOf(over);
+    if (srcIdx < overIdx) over.after(dragSrc);
+    else over.before(dragSrc);
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    commitDragSort();
+  }
+
+  function onDragEnd() {
+    dragSrc?.classList.remove("dragging");
+    dragSrc = null;
+  }
+
+  // タッチ並べ替え
+  let touchItem = null, touchClone = null, touchOffsetY = 0;
+
+  function onTouchStart(e) {
+    const grip = e.target.closest(".grip-handle");
+    if (!grip) return;
+    touchItem = itemOf(grip);
+    if (!touchItem) return;
+
+    const rect = touchItem.getBoundingClientRect();
+    touchOffsetY = e.touches[0].clientY - rect.top;
+
+    touchClone = touchItem.cloneNode(true);
+    touchClone.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:.85;pointer-events:none;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);`;
+    document.body.append(touchClone);
+    touchItem.classList.add("dragging");
+
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd);
+  }
+
+  function onTouchMove(e) {
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    touchClone.style.top = `${y - touchOffsetY}px`;
+
+    const centerY = y - touchOffsetY + touchItem.offsetHeight / 2;
+    const items = [...container.querySelectorAll(".favorite-editor-item:not(.dragging)")];
+    for (const item of items) {
+      const r = item.getBoundingClientRect();
+      if (centerY < r.top + r.height / 2) { item.before(touchItem); return; }
+    }
+    if (items.length) items[items.length - 1].after(touchItem);
+  }
+
+  function onTouchEnd() {
+    touchClone?.remove();
+    touchItem?.classList.remove("dragging");
+    touchItem = null; touchClone = null;
+    document.removeEventListener("touchmove", onTouchMove);
+    document.removeEventListener("touchend", onTouchEnd);
+    commitDragSort();
+  }
+}
+
+function commitDragSort() {
+  const container = els.favoriteListEditor;
+  const newOrder = [...container.querySelectorAll(".favorite-editor-item")].map((el) => el.dataset.favoriteListId);
+  const lists = loadFavoriteLists();
+  const map = new Map(lists.map((l) => [l.id, l]));
+  const reordered = newOrder.map((id) => map.get(id)).filter(Boolean);
+  // 念のため map にない項目を末尾に追加
+  for (const l of lists) { if (!reordered.includes(l)) reordered.push(l); }
+  syncFavoriteViews(saveFavoriteLists(reordered), { preserveEditorFocus: true });
 }
 
 function addFavoriteList() {
