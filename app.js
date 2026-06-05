@@ -251,6 +251,9 @@ async function init() {
   cacheElements();
   initMap();
   bindEvents();
+  // 初期タブに合わせてリセットボタンの表示を同期
+  const activeTab = [...els.filterPanelTabs].find((t) => t.classList.contains("is-active"));
+  els.filterSubHeader.hidden = activeTab?.dataset.filterPanelTab === "favorites";
 
   try {
     const csv = await fetch(DATA_URL).then((response) => {
@@ -307,6 +310,7 @@ function cacheElements() {
   els.visibleSummary  = document.getElementById("visibleSummary");
   els.copyUrlButton   = document.getElementById("copyUrlButton");
   els.resetButton     = document.getElementById("resetButton");
+  els.filterSubHeader  = document.querySelector(".filter-sub-header");
   els.devRangeLabel    = document.getElementById("devRangeLabel");
   els.naishinRangeLabel = document.getElementById("naishinRangeLabel");
   els.devFill     = document.getElementById("devFill");
@@ -700,7 +704,7 @@ function setFilterPanelTab(tabName) {
   for (const panel of els.filterPanelPanels) {
     panel.hidden = panel.dataset.filterPanel !== nextTab;
   }
-  els.resetButton.hidden = nextTab === "favorites";
+  els.filterSubHeader.hidden = nextTab === "favorites";
 }
 
 function handleFilterPanelTabKeydown(event) {

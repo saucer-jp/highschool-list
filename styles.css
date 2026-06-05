@@ -227,6 +227,11 @@ h1 {
   margin-bottom: 0.85rem;
 }
 
+.filter-sub-header[hidden] {
+  display: none;
+}
+
+
 #filterCloseButton {
   display: none;
 }
