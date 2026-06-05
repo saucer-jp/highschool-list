@@ -38,15 +38,14 @@
 
       <aside class="filter-panel" id="filterPanel" aria-label="絞り込み条件">
         <div class="filter-panel-header">
-          <h2 id="filterPanelTitle">絞り込み</h2>
+          <div class="filter-tabs" role="tablist" aria-label="絞り込みエリア">
+            <button type="button" id="filterTabFilters" class="filter-tab is-active" role="tab" aria-selected="true" aria-controls="filters" data-filter-panel-tab="filters">絞り込み</button>
+            <button type="button" id="filterTabFavorites" class="filter-tab" role="tab" aria-selected="false" aria-controls="favoriteEditorPanel" data-filter-panel-tab="favorites">お気に入り編集</button>
+          </div>
           <div class="filter-panel-actions">
             <button type="button" id="resetButton" class="text-button">条件をリセット</button>
             <button type="button" id="filterCloseButton" class="secondary">閉じる</button>
           </div>
-        </div>
-        <div class="filter-tabs" role="tablist" aria-label="絞り込みエリア">
-          <button type="button" id="filterTabFilters" class="filter-tab is-active" role="tab" aria-selected="true" aria-controls="filters" data-filter-panel-tab="filters">絞り込み</button>
-          <button type="button" id="filterTabFavorites" class="filter-tab" role="tab" aria-selected="false" aria-controls="favoriteEditorPanel" data-filter-panel-tab="favorites">お気に入り編集</button>
         </div>
         <form id="filters" class="filters filter-tab-panel" role="tabpanel" aria-labelledby="filterTabFilters" autocomplete="off" data-filter-panel="filters">
           <div class="field field-wide">

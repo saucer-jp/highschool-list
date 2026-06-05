@@ -288,7 +288,6 @@ function cacheElements() {
   els.favoriteDialogClose = document.getElementById("favoriteDialogClose");
   els.favoriteDialogCancel = document.getElementById("favoriteDialogCancel");
   els.favoriteDialogSave = document.getElementById("favoriteDialogSave");
-  els.filterPanelTitle = document.getElementById("filterPanelTitle");
   els.filterPanelTabs = document.querySelectorAll("[data-filter-panel-tab]");
   els.filterPanelPanels = document.querySelectorAll("[data-filter-panel]");
   els.filters      = document.getElementById("filters");
@@ -701,7 +700,7 @@ function setFilterPanelTab(tabName) {
   for (const panel of els.filterPanelPanels) {
     panel.hidden = panel.dataset.filterPanel !== nextTab;
   }
-  els.filterPanelTitle.textContent = nextTab === "favorites" ? "お気に入り編集" : "絞り込み";
+  els.resetButton.hidden = nextTab === "favorites";
 }
 
 function handleFilterPanelTabKeydown(event) {
