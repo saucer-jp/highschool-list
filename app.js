@@ -1113,12 +1113,15 @@ function createCard(row, index) {
   const mapsUrl = buildMapsUrl(row);
   const isFav = isInAnyFavoriteList(row.department_id);
   const favoriteButtonLabel = `${row["高校名"]} ${row["学科名"]}`;
+  const schoolNameHtml = row["Webサイト"]
+    ? `<a class="school-name-link" href="${escapeAttribute(row["Webサイト"])}" target="_blank" rel="noopener" aria-label="${escapeAttribute(`${row["高校名"]} 公式サイトを開く`)}">${escapeHtml(row["高校名"])}</a>`
+    : escapeHtml(row["高校名"]);
 
   card.innerHTML = `
     <div class="card-top">
       <div>
         <div class="school-title">
-          <h3>${escapeHtml(row["高校名"])}</h3>
+          <h3>${schoolNameHtml}</h3>
           <span class="kana">${escapeHtml(row["高校名かな"])}</span>
         </div>
         <p class="school-address">${escapeHtml(addressLabel)}</p>
@@ -1154,7 +1157,6 @@ function createCard(row, index) {
       <div class="data-item"><span>大学進学率</span><strong>${formatPercent(row.universityRate)}</strong></div>
     </div>
     <div class="sources">
-      ${linkHtml(row["Webサイト"], "公式")}
       ${linkHtml(row["偏差値出典"], "偏差出典")}
       ${linkHtml(row["内申点_source_url"] || row["内申点出典"], "内申出典")}
       ${linkHtml(row["大学進学率_source_url"], "進学出典")}

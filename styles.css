@@ -647,6 +647,22 @@ select {
   font-size: 1.15rem;
 }
 
+.school-name-link {
+  color: var(--accent-2);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+}
+
+.school-name-link:hover {
+  text-decoration-thickness: 0.12em;
+}
+
+.school-name-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
 .kana {
   color: var(--muted);
   font-size: 0.84rem;
