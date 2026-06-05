@@ -361,6 +361,18 @@ function bindEvents() {
     favoriteDialogDepartmentId = "";
   });
   els.cards.addEventListener("click", (event) => {
+    // more-btn: ドロップダウン開閉
+    const moreBtn = event.target.closest(".more-btn");
+    if (moreBtn) {
+      const menu = moreBtn.closest(".more-menu");
+      const isOpen = menu.classList.toggle("is-open");
+      moreBtn.setAttribute("aria-expanded", String(isOpen));
+      event.stopPropagation();
+      return;
+    }
+
+    // ドロップダウン外クリックで閉じる処理はdocumentで行うため、
+    // dropdown内リンクはそのまま通過させる
     const favBtn = event.target.closest("[data-fav-school]");
     if (favBtn) {
       const deptId = favBtn.dataset.favSchool;
@@ -375,6 +387,16 @@ function bindEvents() {
       if (isNarrowWorkspace()) setWorkspaceView("map");
       map.setView(marker.getLatLng(), 14);
       marker.openPopup();
+    }
+  });
+
+  // more-dropdown 以外をクリックで全て閉じる
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".more-menu")) {
+      document.querySelectorAll(".more-menu.is-open").forEach((menu) => {
+        menu.classList.remove("is-open");
+        menu.querySelector(".more-btn")?.setAttribute("aria-expanded", "false");
+      });
     }
   });
   els.map.addEventListener("click", (event) => {
@@ -1142,6 +1164,19 @@ function createCard(row, index) {
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" class="fav-star-shape"/>
           </svg>
         </button>
+        <div class="more-menu">
+          <button type="button" class="icon-btn more-btn" aria-label="その他のリンク" aria-expanded="false" aria-haspopup="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+          <ul class="more-dropdown" role="menu">
+            ${row["偏差値出典"] ? `<li role="none"><a role="menuitem" href="${escapeAttribute(row["偏差値出典"])}" target="_blank" rel="noopener">偏差出典</a></li>` : ""}
+            ${(row["内申点_source_url"] || row["内申点出典"]) ? `<li role="none"><a role="menuitem" href="${escapeAttribute(row["内申点_source_url"] || row["内申点出典"])}" target="_blank" rel="noopener">内申出典</a></li>` : ""}
+            ${row["大学進学率_source_url"] ? `<li role="none"><a role="menuitem" href="${escapeAttribute(row["大学進学率_source_url"])}" target="_blank" rel="noopener">進学出典</a></li>` : ""}
+            <li role="none"><a role="menuitem" href="${escapeAttribute(mapsUrl)}" target="_blank" rel="noopener">Google Map</a></li>
+          </ul>
+        </div>
       </div>
     </div>
     <div class="badges">
@@ -1155,12 +1190,6 @@ function createCard(row, index) {
       <div class="data-item"><span>内申点</span><strong class="data-value-truncate" title="${escapeAttribute(naishinLabel)}">${escapeHtml(naishinLabel)}</strong></div>
       <div class="data-item"><span>距離</span><strong>${Number.isFinite(distance) ? `${distance.toFixed(1)} km` : "-"}</strong></div>
       <div class="data-item"><span>大学進学率</span><strong>${formatPercent(row.universityRate)}</strong></div>
-    </div>
-    <div class="sources">
-      ${linkHtml(row["偏差値出典"], "偏差出典")}
-      ${linkHtml(row["内申点_source_url"] || row["内申点出典"], "内申出典")}
-      ${linkHtml(row["大学進学率_source_url"], "進学出典")}
-      <a class="button-link" href="${escapeAttribute(mapsUrl)}" target="_blank" rel="noopener">Google Map</a>
     </div>
   `;
 
