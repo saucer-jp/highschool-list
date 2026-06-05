@@ -518,6 +518,32 @@ select {
   contain-intrinsic-size: auto none auto 220px;
 }
 
+.school-card:focus-visible {
+  outline: 3px solid #e0a11b;
+  outline-offset: 3px;
+}
+
+.school-card.is-map-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(42 108 87 / 0.18), var(--shadow);
+  animation: map-target-flash 1s ease-in-out 3;
+}
+
+@keyframes map-target-flash {
+  0%,
+  100% {
+    background: var(--surface);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgb(42 108 87 / 0.18), var(--shadow);
+  }
+
+  50% {
+    background: #fff7d6;
+    border-color: #e0a11b;
+    box-shadow: 0 0 0 5px rgb(224 161 27 / 0.28), var(--shadow);
+  }
+}
+
 .card-top {
   display: flex;
   justify-content: space-between;
@@ -709,6 +735,19 @@ select {
   padding-inline-start: 1rem;
 }
 
+.popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.popup-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+}
+
 .app-footer {
   padding: 2rem 0;
   color: var(--muted);
@@ -817,6 +856,10 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .filter-panel {
     transition: none;
+  }
+
+  .school-card.is-map-target {
+    animation: none;
   }
 }
 

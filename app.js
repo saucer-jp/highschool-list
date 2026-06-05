@@ -208,6 +208,7 @@ function cacheElements() {
   els.contentPane  = document.getElementById("contentPane");
   els.appHeader    = document.querySelector(".app-header");
   els.appFooter    = document.querySelector(".app-footer");
+  els.map          = document.getElementById("map");
   els.cards        = document.getElementById("cards");
   els.status       = document.getElementById("status");
   els.workspace    = document.querySelector(".workspace");
@@ -277,6 +278,12 @@ function bindEvents() {
       map.setView(marker.getLatLng(), 14);
       marker.openPopup();
     }
+  });
+  els.map.addEventListener("click", (event) => {
+    const link = event.target.closest("[data-show-school-card]");
+    if (!link) return;
+    event.preventDefault();
+    showSchoolCard(link.dataset.showSchoolCard, link.hash);
   });
 
   // スライダー同士の交差防止 & ラベル即時更新
@@ -825,6 +832,9 @@ function renderCards(rows) {
 function createCard(row, index) {
   const card = document.createElement("article");
   card.className = index >= 4 ? "school-card deferred" : "school-card";
+  card.id = schoolCardId(row);
+  card.dataset.schoolId = row.school_id;
+  card.tabIndex = -1;
 
   const distance = distanceFromPostal(row);
   const naishinLabel = row["内申点_app_display"] || row["内申点"] || row["内申点_classification"] || "-";
@@ -937,8 +947,58 @@ function buildPopup(first, schoolRows) {
     <div>${escapeHtml(first["住所"])}</div>
     <ul class="popup-list">${items}</ul>
     ${more}
-    <a href="${escapeAttribute(buildMapsUrl(first))}" target="_blank" rel="noopener">Google Mapsで開く</a>
+    <div class="popup-actions">
+      <a href="#${escapeAttribute(schoolCardId(first))}" data-show-school-card="${escapeAttribute(first.school_id)}">カードを見る</a>
+      <a href="${escapeAttribute(buildMapsUrl(first))}" target="_blank" rel="noopener">Google Mapsで開く</a>
+    </div>
   `;
+}
+
+function showSchoolCard(schoolId, hash) {
+  const switchedView = isNarrowWorkspace() && els.workspace.dataset.view !== "results";
+  if (isNarrowWorkspace()) setWorkspaceView("results");
+  const selector = `[data-school-id="${cssEscape(schoolId)}"]`;
+  const card = els.cards.querySelector(selector) || (hash ? document.querySelector(hash) : null);
+  if (!card) return;
+
+  afterAnimationFrames(switchedView ? 3 : 1, () => revealSchoolCard(card));
+}
+
+function revealSchoolCard(card) {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!isElementInViewport(card)) {
+    card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+  }
+  card.focus({ preventScroll: true });
+  flashSchoolCard(card);
+}
+
+function flashSchoolCard(card) {
+  for (const highlighted of els.cards.querySelectorAll(".is-map-target")) {
+    highlighted.classList.remove("is-map-target");
+  }
+  card.classList.remove("is-map-target");
+  requestAnimationFrame(() => {
+    card.classList.add("is-map-target");
+  });
+}
+
+function isElementInViewport(element) {
+  const margin = 16;
+  const rect = element.getBoundingClientRect();
+  return rect.top >= margin && rect.bottom <= window.innerHeight - margin;
+}
+
+function afterAnimationFrames(count, callback) {
+  if (count <= 0) {
+    callback();
+    return;
+  }
+  requestAnimationFrame(() => afterAnimationFrames(count - 1, callback));
+}
+
+function schoolCardId(row) {
+  return `school-card-${row.department_id}`;
 }
 
 function buildMapsUrl(row) {
@@ -1022,4 +1082,9 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
   return escapeHtml(value);
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) return CSS.escape(String(value));
+  return String(value).replaceAll('"', '\\"');
 }
