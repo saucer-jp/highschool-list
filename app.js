@@ -54,15 +54,77 @@ function toggleFavorite(schoolId) {
 // 公私区分・共学区分の全選択肢
 const ALL_SECTORS = ["公立", "私立", "国立"];
 const ALL_GENDERS = ["共学", "男子校", "女子校"];
-const ALL_DEPT_CATS = ["普通科", "理数・情報系", "商業・外国語系", "芸術・体育・専門系"];
+const ALL_DEPT_CATS = [
+  "普通科",
+  "理数・情報系",
+  "商業・国際系",
+  "工業・ものづくり系",
+  "農業・家庭・福祉系",
+  "芸術・体育・総合その他",
+];
 
 // 学科名 → カテゴリのマッピング
 function deptCategory(deptName) {
-  if (!deptName) return "芸術・体育・専門系";
+  if (!deptName) return "芸術・体育・総合その他";
   if (deptName.startsWith("普通科")) return "普通科";
-  if (["理数科", "理数科（先端サイエンス）", "情報処理科", "総合科学科（IG/SG）"].includes(deptName)) return "理数・情報系";
-  if (["商業科", "国際経済科", "外国語科", "外国語コース"].includes(deptName)) return "商業・外国語系";
-  return "芸術・体育・専門系";
+  if ([
+    "理数科",
+    "理数科（先端サイエンス）",
+    "総合科学科（IG/SG）",
+    "情報処理科",
+    "情報技術科",
+    "情報サイエンス科",
+    "情報メディア科",
+    "情報通信科",
+    "情報電子科",
+  ].includes(deptName)) return "理数・情報系";
+  if ([
+    "商業科",
+    "会計科",
+    "ビジネス会計科",
+    "ビジネス探究科",
+    "総合ビジネス科",
+    "流通経済科",
+    "国際経済科",
+    "国際流通科",
+    "外国語科",
+    "外国語コース",
+    "国際教養科",
+    "国際科",
+    "人文科",
+  ].includes(deptName)) return "商業・国際系";
+  if ([
+    "機械",
+    "電気",
+    "電子",
+    "建築",
+    "土木",
+    "化学",
+    "工業",
+    "ロボット",
+    "ものづくり",
+    "デザイン科",
+    "グラフィックアーツ科",
+  ].some((keyword) => deptName.includes(keyword))) return "工業・ものづくり系";
+  if ([
+    "農業",
+    "園芸",
+    "森林",
+    "生物",
+    "食品",
+    "食物",
+    "食育",
+    "フード",
+    "生活",
+    "家政",
+    "ライフ",
+    "保育",
+    "看護",
+    "福祉",
+    "造園",
+    "環境",
+  ].some((keyword) => deptName.includes(keyword))) return "農業・家庭・福祉系";
+  return "芸術・体育・総合その他";
 }
 
 const defaultState = {
@@ -453,8 +515,8 @@ function normalizeRow(row) {
   const naishinMin = toNumber(row["内申点_min"]);
   const naishinMax = toNumber(row["内申点_max"]);
   const naishin = toNumber(row["内申点"]);
-  const lat = toNumber(row["代表点緯度"]);
-  const lng = toNumber(row["代表点経度"]);
+  const lat = toNumber(row["緯度"] || row["代表点緯度"]);
+  const lng = toNumber(row["経度"] || row["代表点経度"]);
   const founded = toNumber(row["創立年_西暦"]);
   const universityRate = toNumber(row["大学進学率"]);
 
@@ -468,7 +530,7 @@ function normalizeRow(row) {
     lng,
     founded,
     universityRate,
-    postalAreaLabel: row["代表点ラベル"],
+    coordinateLabel: row["座標ラベル"] || row["代表点ラベル"],
     searchable: [
       row["高校名"],
       row["高校名かな"],
@@ -887,7 +949,7 @@ function buildStatusText(rows, state) {
   const parts = [];
   const missingPoints = rows.filter((row) => !Number.isFinite(row.lat) || !Number.isFinite(row.lng)).length;
   if (postalMessage) parts.push(postalMessage);
-  if (missingPoints) parts.push(`町域代表点なし: ${missingPoints}件`);
+  if (missingPoints) parts.push(`座標なし: ${missingPoints}件`);
   if (state.sort === "distance" && !postalPoint && !postalMessage) parts.push("距離ソートには7桁の郵便番号が必要です");
   return parts.join("。");
 }

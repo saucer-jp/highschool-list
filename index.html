@@ -64,8 +64,10 @@
             <div class="check-group" id="deptCatGroup">
               <label class="check-chip"><input type="checkbox" name="deptCat" value="普通科"><span>普通科</span></label>
               <label class="check-chip"><input type="checkbox" name="deptCat" value="理数・情報系"><span>理数・情報系</span></label>
-              <label class="check-chip"><input type="checkbox" name="deptCat" value="商業・外国語系"><span>商業・外国語系</span></label>
-              <label class="check-chip"><input type="checkbox" name="deptCat" value="芸術・体育・専門系"><span>芸術・体育・専門系</span></label>
+              <label class="check-chip"><input type="checkbox" name="deptCat" value="商業・国際系"><span>商業・国際系</span></label>
+              <label class="check-chip"><input type="checkbox" name="deptCat" value="工業・ものづくり系"><span>工業・ものづくり系</span></label>
+              <label class="check-chip"><input type="checkbox" name="deptCat" value="農業・家庭・福祉系"><span>農業・家庭・福祉系</span></label>
+              <label class="check-chip"><input type="checkbox" name="deptCat" value="芸術・体育・総合その他"><span>芸術・体育・総合その他</span></label>
             </div>
           </div>
           <div class="field field-wide">
@@ -163,16 +165,16 @@
       <section class="notice" aria-labelledby="notice-title">
         <h2 id="notice-title">利用上の注意</h2>
         <p>このサイトは公開情報をもとに独自整理した参考情報です。偏差値・内申点・大学進学率・所在地は最新情報や公式情報と異なる場合があるため、受験判断では各校公式サイトと出典元を確認してください。</p>
-        <p>公開CSVには調査メモや作業ログを含めず、学校基本情報と出典リンクに必要な最小限の列だけを収録しています。地図上の位置と距離は学校所在地の正確な座標ではなく、HeartRails Geo API で作成した町域代表点から計算します。町域代表点が取得できない学校は地図と距離ソートの対象外です。</p>
+        <p>公開CSVには調査メモや作業ログを含めず、学校基本情報と出典リンクに必要な最小限の列だけを収録しています。地図上の位置と距離はGSI住所検索で取得した住所代表点から計算します。座標が取得できない学校は地図と距離ソートの対象外です。</p>
       </section>
       <p>学校データ出典はCSV内の出典リンクと <code>resources/highschool_sources_stage19.md</code> を参照。地図データ © OpenStreetMap contributors。</p>
-      <p>郵便番号検索の出典: 「位置参照情報ダウンロードサービス」（国土交通省）を加工して作成。HeartRails Geo API を利用。</p>
+      <p>学校座標の出典: GSI住所検索。郵便番号検索の出典: 「位置参照情報ダウンロードサービス」（国土交通省）を加工して作成。HeartRails Geo API を利用。</p>
     </footer>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""></script>
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
   </body>
 </html>
