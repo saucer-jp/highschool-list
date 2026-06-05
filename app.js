@@ -31,6 +31,24 @@ const FAV_KEY = "highschool_favorites";
 const FAV_LISTS_KEY = "highschool_favorite_lists";
 const DEFAULT_FAVORITE_LIST_ID = "default";
 const DEFAULT_FAVORITE_LIST_NAME = "お気に入り";
+const FAVORITE_COLORS = [
+  { value: "#f0b429", label: "ゴールド" },
+  { value: "#e0533d", label: "レッド" },
+  { value: "#ec6f9c", label: "ピンク" },
+  { value: "#e8842c", label: "オレンジ" },
+  { value: "#3f9b46", label: "グリーン" },
+  { value: "#1f8a8a", label: "ティール" },
+  { value: "#2f7fd1", label: "ブルー" },
+  { value: "#6f5bd0", label: "パープル" },
+  { value: "#8a6d4a", label: "ブラウン" },
+  { value: "#5f6d66", label: "グレー" },
+];
+const DEFAULT_FAVORITE_COLOR = FAVORITE_COLORS[0].value;
+
+function normalizeFavoriteColor(value) {
+  const color = String(value || "").toLowerCase();
+  return FAVORITE_COLORS.some((c) => c.value === color) ? color : DEFAULT_FAVORITE_COLOR;
+}
 
 function loadFavorites() {
   try {
@@ -54,14 +72,11 @@ function loadFavoriteLists() {
     // Fall through to legacy migration.
   }
 
-  return legacyIds.length ? [{
+  return [{
     id: DEFAULT_FAVORITE_LIST_ID,
     name: DEFAULT_FAVORITE_LIST_NAME,
     schoolIds: legacyIds,
-  }] : [{
-    id: DEFAULT_FAVORITE_LIST_ID,
-    name: DEFAULT_FAVORITE_LIST_NAME,
-    schoolIds: [],
+    color: DEFAULT_FAVORITE_COLOR,
   }];
 }
 
@@ -75,7 +90,8 @@ function normalizeFavoriteLists(value) {
       seen.add(id);
       const name = String(list.name || "").trim() || `${DEFAULT_FAVORITE_LIST_NAME}${index + 1}`;
       const schoolIds = Array.isArray(list.schoolIds) ? [...new Set(list.schoolIds.map(String).filter(Boolean))] : [];
-      return { id, name, schoolIds };
+      const color = normalizeFavoriteColor(list.color);
+      return { id, name, schoolIds, color };
     })
     .filter(Boolean);
 }
@@ -125,6 +141,13 @@ function setFavoriteListSelection(departmentId, selectedListIds) {
 
 function isInAnyFavoriteList(departmentId) {
   return getFavoriteListSelection(departmentId).length > 0;
+}
+
+// カードに適用するお気に入り色（複数所属時は編集タブの並びで先頭のリストを採用）
+function getFavoriteColorForDepartment(departmentId, lists = loadFavoriteLists()) {
+  const deptId = String(departmentId);
+  const list = lists.find((l) => l.schoolIds.includes(deptId));
+  return list ? normalizeFavoriteColor(list.color) : null;
 }
 
 // 公私区分・共学区分の全選択肢
@@ -401,7 +424,15 @@ function bindEvents() {
         menu.querySelector(".more-btn")?.setAttribute("aria-expanded", "false");
       });
     }
+    // カラードロップダウンも外側クリックで閉じる
+    if (!event.target.closest(".favorite-color-picker")) {
+      closeAllColorDropdowns();
+    }
   });
+
+  // fixed配置のためスクロールで位置がずれる → 閉じる
+  document.addEventListener("scroll", () => closeAllColorDropdowns(), { capture: true, passive: true });
+  window.addEventListener("resize", () => closeAllColorDropdowns());
   els.map.addEventListener("click", (event) => {
     const link = event.target.closest("[data-show-school-card]");
     if (!link) return;
@@ -759,6 +790,19 @@ function renderFavoriteEditor() {
           <rect x="4" y="11" width="2" height="2" rx="1"/><rect x="10" y="11" width="2" height="2" rx="1"/>
         </svg>
       </button>
+      <div class="favorite-color-picker">
+        <button type="button" class="color-chip-btn" data-color-chip="${escapeAttribute(list.id)}" aria-label="色を選択" aria-haspopup="true" aria-expanded="false">
+          <span class="color-chip" style="background:${escapeAttribute(list.color)}"></span>
+        </button>
+        <div class="color-dropdown" role="menu" aria-label="色の選択">
+          ${FAVORITE_COLORS.map((c) => `
+            <button type="button" role="menuitemradio" class="color-option${c.value === list.color ? " is-selected" : ""}"
+              data-favorite-color="${escapeAttribute(c.value)}" data-favorite-color-list="${escapeAttribute(list.id)}"
+              aria-checked="${c.value === list.color}" aria-label="${escapeAttribute(c.label)}"
+              style="background:${escapeAttribute(c.value)}"></button>
+          `).join("")}
+        </div>
+      </div>
       <div class="favorite-name-field">
         <input id="${escapeAttribute(inputId)}" type="text" value="${escapeAttribute(list.name)}" data-favorite-name="${escapeAttribute(list.id)}" maxlength="40" aria-label="お気に入りリスト名">
       </div>
@@ -886,6 +930,7 @@ function addFavoriteList() {
     id: createFavoriteListId(),
     name: createFavoriteListName(lists),
     schoolIds: [],
+    color: DEFAULT_FAVORITE_COLOR,
   };
   const saved = saveFavoriteLists([...lists, next]);
   syncFavoriteViews(saved);
@@ -905,7 +950,60 @@ function handleFavoriteEditorInput(event) {
   syncFavoriteViews(saveFavoriteLists(lists), { preserveEditorFocus: true });
 }
 
+// ドロップダウンは position: fixed のため、チップ位置から座標を計算する
+// （.filter-panel の overflow-y: auto によるクリップ回避）
+function positionColorDropdown(picker, chipBtn) {
+  const dropdown = picker.querySelector(".color-dropdown");
+  if (!dropdown) return;
+  const rect = chipBtn.getBoundingClientRect();
+  const gap = 4;
+  // いったん表示して実寸を取得
+  dropdown.style.visibility = "hidden";
+  dropdown.style.left = "0px";
+  dropdown.style.top = "0px";
+  const { width, height } = dropdown.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + gap;
+  if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+  if (top + height > window.innerHeight - 8) top = rect.top - height - gap;
+  dropdown.style.left = `${Math.max(8, left)}px`;
+  dropdown.style.top = `${Math.max(8, top)}px`;
+  dropdown.style.visibility = "";
+}
+
+function closeAllColorDropdowns(except = null) {
+  document.querySelectorAll(".favorite-color-picker.is-open").forEach((picker) => {
+    if (picker === except) return;
+    picker.classList.remove("is-open");
+    picker.querySelector(".color-chip-btn")?.setAttribute("aria-expanded", "false");
+  });
+}
+
 function handleFavoriteEditorClick(event) {
+  // カラーチップ: ドロップダウン開閉
+  const chipBtn = event.target.closest("[data-color-chip]");
+  if (chipBtn) {
+    const picker = chipBtn.closest(".favorite-color-picker");
+    closeAllColorDropdowns(picker);
+    const isOpen = picker.classList.toggle("is-open");
+    chipBtn.setAttribute("aria-expanded", String(isOpen));
+    if (isOpen) positionColorDropdown(picker, chipBtn);
+    return;
+  }
+
+  // カラー選択
+  const colorBtn = event.target.closest("[data-favorite-color]");
+  if (colorBtn) {
+    const listId = colorBtn.dataset.favoriteColorList;
+    const color = normalizeFavoriteColor(colorBtn.dataset.favoriteColor);
+    const lists = loadFavoriteLists().map((list) => (
+      list.id === listId ? { ...list, color } : list
+    ));
+    closeAllColorDropdowns();
+    syncFavoriteViews(saveFavoriteLists(lists));
+    return;
+  }
+
   const button = event.target.closest("[data-delete-favorite-list]");
   if (!button) return;
   const listId = button.dataset.deleteFavoriteList;
@@ -1219,6 +1317,7 @@ function renderFavoriteDialogLists(departmentId) {
     label.className = "favorite-dialog-option";
     label.innerHTML = `
       <input type="checkbox" name="favoriteDialogList" value="${escapeAttribute(list.id)}"${selected.has(list.id) ? " checked" : ""}>
+      <span class="color-chip favorite-dialog-color" style="background:${escapeAttribute(list.color)}" aria-hidden="true"></span>
       <span>${escapeHtml(list.name)}</span>
     `;
     return label;
@@ -1254,7 +1353,8 @@ function createCard(row, index) {
   const naishinLabel = row["内申点_app_display"] || row["内申点"] || row["内申点_classification"] || "-";
   const addressLabel = formatAddressWithFounded(row);
   const mapsUrl = buildMapsUrl(row);
-  const isFav = isInAnyFavoriteList(row.department_id);
+  const favColor = getFavoriteColorForDepartment(row.department_id);
+  const isFav = favColor !== null;
   const favoriteButtonLabel = `${row["高校名"]} ${row["学科名"]}`;
   const schoolNameHtml = row["Webサイト"]
     ? `<a class="school-name-link" href="${escapeAttribute(row["Webサイト"])}" target="_blank" rel="noopener" aria-label="${escapeAttribute(`${row["高校名"]} 公式サイトを開く`)}">${escapeHtml(row["高校名"])}</a>`
@@ -1276,7 +1376,7 @@ function createCard(row, index) {
             <circle cx="12" cy="10" r="3"/>
           </svg>
         </button>
-        <button type="button" class="icon-btn fav-btn${isFav ? " is-fav" : ""}"
+        <button type="button" class="icon-btn fav-btn${isFav ? " is-fav" : ""}"${isFav ? ` style="--fav-color:${escapeAttribute(favColor)}"` : ""}
           data-fav-school="${escapeHtml(row.department_id)}"
           data-fav-school-label="${escapeAttribute(favoriteButtonLabel)}"
           aria-label="お気に入りを編集"

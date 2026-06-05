@@ -285,7 +285,7 @@ h1 {
 
 .favorite-editor-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   gap: 0.45rem;
   align-items: end;
   padding: 0.65rem;
@@ -330,6 +330,76 @@ h1 {
   display: grid;
   gap: 0.25rem;
   min-width: 0;
+}
+
+/* ---------- お気に入りカラーピッカー ---------- */
+.favorite-color-picker {
+  position: relative;
+  align-self: center;
+}
+
+.color-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.color-chip-btn:hover,
+.favorite-color-picker.is-open .color-chip-btn {
+  border-color: var(--accent);
+}
+
+.color-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 0.12);
+}
+
+.color-dropdown {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  grid-template-columns: repeat(5, 26px);
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.favorite-color-picker.is-open .color-dropdown {
+  display: grid;
+}
+
+.color-option {
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s;
+}
+
+.color-option:hover {
+  transform: scale(1.12);
+}
+
+.color-option.is-selected {
+  border-color: var(--text);
+  box-shadow: inset 0 0 0 2px #fff;
 }
 
 .favorite-count {
@@ -830,12 +900,13 @@ select {
 }
 
 .fav-btn.is-fav {
-  border-color: #f0b429;
-  color: #f0b429;
+  border-color: var(--fav-color, #f0b429);
+  color: var(--fav-color, #f0b429);
+  background: color-mix(in srgb, var(--fav-color, #f0b429) 12%, #fff);
 }
 
 .fav-btn.is-fav .fav-star-shape {
-  fill: #f0b429;
+  fill: var(--fav-color, #f0b429);
 }
 
 .fav-btn:hover .fav-star-shape {
@@ -917,6 +988,13 @@ select {
 .favorite-dialog-option span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.favorite-dialog-option .favorite-dialog-color {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
 }
 
 .dialog-actions {
