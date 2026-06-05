@@ -757,8 +757,7 @@ function renderFavoriteEditor() {
         </svg>
       </button>
       <div class="favorite-name-field">
-        <label for="${escapeAttribute(inputId)}">名前</label>
-        <input id="${escapeAttribute(inputId)}" type="text" value="${escapeAttribute(list.name)}" data-favorite-name="${escapeAttribute(list.id)}" maxlength="40">
+        <input id="${escapeAttribute(inputId)}" type="text" value="${escapeAttribute(list.name)}" data-favorite-name="${escapeAttribute(list.id)}" maxlength="40" aria-label="お気に入りリスト名">
       </div>
       <span class="favorite-count">${list.schoolIds.length}件</span>
       <button type="button" class="text-button danger-text" data-delete-favorite-list="${escapeAttribute(list.id)}">削除</button>
