@@ -23,14 +23,19 @@ const stateKeys = [
   "sort",
   "dir",
   "favOnly",
+  "favLists",
 ];
 
 // ---------- お気に入り (localStorage) ----------
 const FAV_KEY = "highschool_favorites";
+const FAV_LISTS_KEY = "highschool_favorite_lists";
+const DEFAULT_FAVORITE_LIST_ID = "default";
+const DEFAULT_FAVORITE_LIST_NAME = "お気に入り";
 
 function loadFavorites() {
   try {
-    return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]"));
+    const value = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
+    return new Set(Array.isArray(value) ? value.map(String) : []);
   } catch {
     return new Set();
   }
@@ -40,15 +45,86 @@ function saveFavorites(set) {
   localStorage.setItem(FAV_KEY, JSON.stringify([...set]));
 }
 
-function toggleFavorite(schoolId) {
-  const favs = loadFavorites();
-  if (favs.has(schoolId)) {
-    favs.delete(schoolId);
-  } else {
-    favs.add(schoolId);
+function loadFavoriteLists() {
+  const legacyIds = [...loadFavorites()];
+  try {
+    const raw = localStorage.getItem(FAV_LISTS_KEY);
+    if (raw !== null) return normalizeFavoriteLists(JSON.parse(raw));
+  } catch {
+    // Fall through to legacy migration.
   }
-  saveFavorites(favs);
-  return favs.has(schoolId);
+
+  return legacyIds.length ? [{
+    id: DEFAULT_FAVORITE_LIST_ID,
+    name: DEFAULT_FAVORITE_LIST_NAME,
+    schoolIds: legacyIds,
+  }] : [{
+    id: DEFAULT_FAVORITE_LIST_ID,
+    name: DEFAULT_FAVORITE_LIST_NAME,
+    schoolIds: [],
+  }];
+}
+
+function normalizeFavoriteLists(value) {
+  const seen = new Set();
+  return value
+    .map((list, index) => {
+      if (!list || typeof list !== "object") return null;
+      const id = String(list.id || (index === 0 ? DEFAULT_FAVORITE_LIST_ID : createFavoriteListId()));
+      if (seen.has(id)) return null;
+      seen.add(id);
+      const name = String(list.name || "").trim() || `${DEFAULT_FAVORITE_LIST_NAME}${index + 1}`;
+      const schoolIds = Array.isArray(list.schoolIds) ? [...new Set(list.schoolIds.map(String).filter(Boolean))] : [];
+      return { id, name, schoolIds };
+    })
+    .filter(Boolean);
+}
+
+function saveFavoriteLists(lists) {
+  const normalized = normalizeFavoriteLists(lists);
+  localStorage.setItem(FAV_LISTS_KEY, JSON.stringify(normalized));
+  const defaultList = normalized.find((list) => list.id === DEFAULT_FAVORITE_LIST_ID) ?? normalized[0];
+  saveFavorites(new Set(defaultList?.schoolIds ?? []));
+  return normalized;
+}
+
+function createFavoriteListId() {
+  if (globalThis.crypto?.randomUUID) return `fav-${globalThis.crypto.randomUUID()}`;
+  return `fav-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createFavoriteListName(lists) {
+  const names = new Set(lists.map((list) => list.name));
+  let index = lists.length + 1;
+  let name = `お気に入り ${index}`;
+  while (names.has(name)) {
+    index += 1;
+    name = `お気に入り ${index}`;
+  }
+  return name;
+}
+
+function getFavoriteListSelection(departmentId) {
+  return loadFavoriteLists().filter((list) => list.schoolIds.includes(String(departmentId))).map((list) => list.id);
+}
+
+function setFavoriteListSelection(departmentId, selectedListIds) {
+  const selected = new Set(selectedListIds.map(String));
+  const deptId = String(departmentId);
+  const lists = loadFavoriteLists().map((list) => {
+    const schoolIds = new Set(list.schoolIds);
+    if (selected.has(list.id)) {
+      schoolIds.add(deptId);
+    } else {
+      schoolIds.delete(deptId);
+    }
+    return { ...list, schoolIds: [...schoolIds] };
+  });
+  return saveFavoriteLists(lists);
+}
+
+function isInAnyFavoriteList(departmentId) {
+  return getFavoriteListSelection(departmentId).length > 0;
 }
 
 // 公私区分・共学区分の全選択肢
@@ -142,6 +218,7 @@ const defaultState = {
   sort: "deviation",
   dir: "desc",
   favOnly: "",
+  favLists: "",
 };
 
 // ソートごとの順序ラベル
@@ -166,6 +243,7 @@ let filterTimer;
 let narrowWorkspaceQuery;
 let resultsScrollY = 0;
 let filterDrawerLastFocus = null;
+let favoriteDialogDepartmentId = "";
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -200,6 +278,19 @@ function cacheElements() {
   els.deptCatCheckboxes = document.querySelectorAll('input[name="deptCat"]');
 
   els.favOnly      = document.getElementById("favOnly");
+  els.favGroup     = document.getElementById("favGroup");
+  els.favoriteEditorPanel = document.getElementById("favoriteEditorPanel");
+  els.favoriteListEditor = document.getElementById("favoriteListEditor");
+  els.addFavoriteListButton = document.getElementById("addFavoriteListButton");
+  els.favoriteDialog = document.getElementById("favoriteDialog");
+  els.favoriteDialogSchool = document.getElementById("favoriteDialogSchool");
+  els.favoriteDialogLists = document.getElementById("favoriteDialogLists");
+  els.favoriteDialogClose = document.getElementById("favoriteDialogClose");
+  els.favoriteDialogCancel = document.getElementById("favoriteDialogCancel");
+  els.favoriteDialogSave = document.getElementById("favoriteDialogSave");
+  els.filterPanelTitle = document.getElementById("filterPanelTitle");
+  els.filterPanelTabs = document.querySelectorAll("[data-filter-panel-tab]");
+  els.filterPanelPanels = document.querySelectorAll("[data-filter-panel]");
   els.filters      = document.getElementById("filters");
   els.filterPanel  = document.getElementById("filterPanel");
   els.filterDrawerButton = document.getElementById("filterDrawerButton");
@@ -256,17 +347,24 @@ function bindEvents() {
     postalPoint = null;
     await update();
   });
+  for (const tab of els.filterPanelTabs) {
+    tab.addEventListener("click", () => setFilterPanelTab(tab.dataset.filterPanelTab));
+    tab.addEventListener("keydown", handleFilterPanelTabKeydown);
+  }
+  els.addFavoriteListButton.addEventListener("click", addFavoriteList);
+  els.favoriteListEditor.addEventListener("input", handleFavoriteEditorInput);
+  els.favoriteListEditor.addEventListener("click", handleFavoriteEditorClick);
+  els.favoriteDialogClose.addEventListener("click", closeFavoriteDialog);
+  els.favoriteDialogCancel.addEventListener("click", closeFavoriteDialog);
+  els.favoriteDialogSave.addEventListener("click", saveFavoriteDialogSelection);
+  els.favoriteDialog.addEventListener("close", () => {
+    favoriteDialogDepartmentId = "";
+  });
   els.cards.addEventListener("click", (event) => {
-    // お気に入りトグル
     const favBtn = event.target.closest("[data-fav-school]");
     if (favBtn) {
       const deptId = favBtn.dataset.favSchool;
-      const isFav = toggleFavorite(deptId);
-      favBtn.classList.toggle("is-fav", isFav);
-      favBtn.setAttribute("aria-label", isFav ? "お気に入り解除" : "お気に入りに追加");
-      favBtn.setAttribute("aria-pressed", String(isFav));
-      // お気に入りのみ表示中の場合は再描画
-      if (els.favOnly.checked) scheduleUpdate();
+      openFavoriteDialog(deptId, favBtn.dataset.favSchoolLabel || "");
       return;
     }
 
@@ -551,6 +649,8 @@ function normalizeRow(row) {
 function populateFilters() {
   fillSelect(els.pref, "すべて", uniqueValues("都道府県"));
   fillSelect(els.city, "すべて", uniqueValues("市区町村"));
+  renderFavoriteFilterOptions();
+  renderFavoriteEditor();
   // 初期スライダー状態を反映
   updateRangeUI();
   updateDirLabels();
@@ -567,6 +667,122 @@ function uniqueValues(column) {
   return [...new Set(allRows.map((row) => row[column]).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, "ja"),
   );
+}
+
+function setFilterPanelTab(tabName) {
+  const nextTab = tabName === "favorites" ? "favorites" : "filters";
+  for (const tab of els.filterPanelTabs) {
+    const selected = tab.dataset.filterPanelTab === nextTab;
+    tab.classList.toggle("is-active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+  }
+  for (const panel of els.filterPanelPanels) {
+    panel.hidden = panel.dataset.filterPanel !== nextTab;
+  }
+  els.filterPanelTitle.textContent = nextTab === "favorites" ? "お気に入り編集" : "絞り込み";
+}
+
+function handleFilterPanelTabKeydown(event) {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const tabs = [...els.filterPanelTabs];
+  const currentIndex = tabs.indexOf(event.currentTarget);
+  let nextIndex = currentIndex;
+  if (event.key === "ArrowLeft") nextIndex = currentIndex <= 0 ? tabs.length - 1 : currentIndex - 1;
+  if (event.key === "ArrowRight") nextIndex = currentIndex >= tabs.length - 1 ? 0 : currentIndex + 1;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = tabs.length - 1;
+  tabs[nextIndex]?.focus();
+  setFilterPanelTab(tabs[nextIndex]?.dataset.filterPanelTab);
+}
+
+function renderFavoriteFilterOptions(selectedIds = getSelectedFavoriteListIds()) {
+  const lists = loadFavoriteLists();
+  const selected = new Set(selectedIds);
+  els.favGroup.replaceChildren();
+
+  for (const list of lists) {
+    const inputId = `fav-list-filter-${list.id}`;
+    const label = document.createElement("label");
+    label.className = "check-chip";
+    label.innerHTML = `
+      <input type="checkbox" id="${escapeAttribute(inputId)}" name="favList" value="${escapeAttribute(list.id)}"${selected.has(list.id) ? " checked" : ""}>
+      <span>${escapeHtml(list.name)}</span>
+    `;
+    els.favGroup.append(label);
+  }
+}
+
+function renderFavoriteEditor() {
+  const lists = loadFavoriteLists();
+  if (!lists.length) {
+    els.favoriteListEditor.replaceChildren(emptyMessage("お気に入り項目はありません。"));
+    return;
+  }
+
+  els.favoriteListEditor.replaceChildren(...lists.map((list) => {
+    const item = document.createElement("div");
+    item.className = "favorite-editor-item";
+    item.dataset.favoriteListId = list.id;
+    const inputId = `favorite-name-${list.id}`;
+    item.innerHTML = `
+      <div class="favorite-name-field">
+        <label for="${escapeAttribute(inputId)}">名前</label>
+        <input id="${escapeAttribute(inputId)}" type="text" value="${escapeAttribute(list.name)}" data-favorite-name="${escapeAttribute(list.id)}" maxlength="40">
+      </div>
+      <span class="favorite-count">${list.schoolIds.length}件</span>
+      <button type="button" class="text-button danger-text" data-delete-favorite-list="${escapeAttribute(list.id)}">削除</button>
+    `;
+    return item;
+  }));
+}
+
+function addFavoriteList() {
+  const lists = loadFavoriteLists();
+  const next = {
+    id: createFavoriteListId(),
+    name: createFavoriteListName(lists),
+    schoolIds: [],
+  };
+  const saved = saveFavoriteLists([...lists, next]);
+  syncFavoriteViews(saved);
+  setFilterPanelTab("favorites");
+  requestAnimationFrame(() => {
+    els.favoriteListEditor.querySelector(`[data-favorite-name="${cssEscape(next.id)}"]`)?.focus();
+  });
+}
+
+function handleFavoriteEditorInput(event) {
+  const input = event.target.closest("[data-favorite-name]");
+  if (!input) return;
+  const listId = input.dataset.favoriteName;
+  const lists = loadFavoriteLists().map((list) => (
+    list.id === listId ? { ...list, name: input.value.trim() || DEFAULT_FAVORITE_LIST_NAME } : list
+  ));
+  syncFavoriteViews(saveFavoriteLists(lists), { preserveEditorFocus: true });
+}
+
+function handleFavoriteEditorClick(event) {
+  const button = event.target.closest("[data-delete-favorite-list]");
+  if (!button) return;
+  const listId = button.dataset.deleteFavoriteList;
+  const saved = saveFavoriteLists(loadFavoriteLists().filter((list) => list.id !== listId));
+  const selected = getSelectedFavoriteListIds().filter((id) => id !== listId);
+  renderFavoriteFilterOptions(selected);
+  renderFavoriteEditor();
+  update();
+  if (favoriteDialogDepartmentId) renderFavoriteDialogLists(favoriteDialogDepartmentId);
+}
+
+function syncFavoriteViews(lists = loadFavoriteLists(), options = {}) {
+  renderFavoriteFilterOptions(getSelectedFavoriteListIds().filter((id) => lists.some((list) => list.id === id)));
+  if (!options.preserveEditorFocus) renderFavoriteEditor();
+  if (favoriteDialogDepartmentId) renderFavoriteDialogLists(favoriteDialogDepartmentId);
+  renderCards(sortRows(filterRows(allRows, getState()), getState()));
+}
+
+function getSelectedFavoriteListIds() {
+  return [...els.favGroup.querySelectorAll('input[name="favList"]:checked')].map((cb) => cb.value);
 }
 
 // --- State 読み書き ---
@@ -601,7 +817,10 @@ function applyState(state) {
   els.naishinMax.value = state.naishinMax !== "" ? state.naishinMax : NAISHIN_MAX;
 
   // お気に入りのみ
-  els.favOnly.checked = state.favOnly === "1";
+  const favoriteListIds = (state.favLists || "").split(",").filter(Boolean);
+  if (state.favOnly === "1" && !favoriteListIds.length) favoriteListIds.push(DEFAULT_FAVORITE_LIST_ID);
+  els.favOnly.checked = false;
+  renderFavoriteFilterOptions(favoriteListIds);
 
   updateRangeUI();
   updateDirLabels();
@@ -615,6 +834,7 @@ function getState() {
     .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
   const deptCat = [...els.deptCatCheckboxes]
     .filter((cb) => cb.checked).map((cb) => cb.value).join(",");
+  const favLists = getSelectedFavoriteListIds().join(",");
 
   return {
     q:            els.q.value.trim(),
@@ -631,6 +851,7 @@ function getState() {
     sort:         els.sort.value,
     dir:          els.dir.value,
     favOnly:      els.favOnly.checked ? "1" : "",
+    favLists,
   };
 }
 
@@ -650,6 +871,7 @@ function writeStateToUrl(state) {
     if (key === "sort"       && value === defaultState.sort)    continue;
     if (key === "dir"        && value === defaultState.dir)     continue;
     if (key === "favOnly"    && !value)                         continue;
+    if (key === "favLists"   && !value)                         continue;
     params.set(key, value);
   }
   const query = params.toString();
@@ -669,6 +891,14 @@ function filterRows(rows, state) {
   const sectorSet  = new Set((state.sector  || "").split(",").filter(Boolean));
   const genderSet  = new Set((state.gender  || "").split(",").filter(Boolean));
   const deptCatSet = new Set((state.deptCat || "").split(",").filter(Boolean));
+  const selectedFavoriteLists = new Set((state.favLists || "").split(",").filter(Boolean));
+  const favoriteLists = selectedFavoriteLists.size || state.favOnly === "1" ? loadFavoriteLists() : [];
+  const selectedFavoriteSchoolIds = new Set(
+    favoriteLists
+      .filter((list) => selectedFavoriteLists.size ? selectedFavoriteLists.has(list.id) : list.id === DEFAULT_FAVORITE_LIST_ID)
+      .flatMap((list) => list.schoolIds),
+  );
+  const legacyFavoriteSchoolIds = state.favOnly === "1" ? loadFavorites() : new Set();
 
   // スライダー: デフォルト値の場合は絞り込まない
   const devMin    = Number(state.devMin);
@@ -686,9 +916,9 @@ function filterRows(rows, state) {
     if (sectorSet.size > 0 && sectorSet.size < ALL_SECTORS.length && !sectorSet.has(row["公立/私立/国立"])) return false;
     if (genderSet.size > 0 && genderSet.size < ALL_GENDERS.length && !genderSet.has(row["共学/男子校/女子校"])) return false;
     if (deptCatSet.size > 0 && deptCatSet.size < ALL_DEPT_CATS.length && !deptCatSet.has(deptCategory(row["学科名"]))) return false;
-    if (state.favOnly === "1") {
-      const favs = loadFavorites();
-      if (!favs.has(row.department_id)) return false;
+    if (selectedFavoriteLists.size || state.favOnly === "1") {
+      const departmentId = String(row.department_id);
+      if (!selectedFavoriteSchoolIds.has(departmentId) && !legacyFavoriteSchoolIds.has(departmentId)) return false;
     }
     if (devActive) {
       if (!Number.isFinite(row.deviation) || row.deviation < devMin || row.deviation > devMax) return false;
@@ -820,6 +1050,47 @@ function renderDistanceBasis() {
   els.distanceBasis.hidden = true;
 }
 
+function openFavoriteDialog(departmentId, label) {
+  favoriteDialogDepartmentId = String(departmentId);
+  els.favoriteDialogSchool.textContent = label;
+  renderFavoriteDialogLists(favoriteDialogDepartmentId);
+  if (typeof els.favoriteDialog.showModal === "function") {
+    els.favoriteDialog.showModal();
+  }
+}
+
+function closeFavoriteDialog() {
+  els.favoriteDialog.close();
+}
+
+function renderFavoriteDialogLists(departmentId) {
+  const lists = loadFavoriteLists();
+  if (!lists.length) {
+    els.favoriteDialogLists.replaceChildren(emptyMessage("お気に入り項目はありません。編集タブで追加してください。"));
+    return;
+  }
+
+  const selected = new Set(getFavoriteListSelection(departmentId));
+  els.favoriteDialogLists.replaceChildren(...lists.map((list) => {
+    const label = document.createElement("label");
+    label.className = "favorite-dialog-option";
+    label.innerHTML = `
+      <input type="checkbox" name="favoriteDialogList" value="${escapeAttribute(list.id)}"${selected.has(list.id) ? " checked" : ""}>
+      <span>${escapeHtml(list.name)}</span>
+    `;
+    return label;
+  }));
+}
+
+function saveFavoriteDialogSelection() {
+  if (!favoriteDialogDepartmentId) return;
+  const selected = [...els.favoriteDialogLists.querySelectorAll('input[name="favoriteDialogList"]:checked')].map((input) => input.value);
+  const lists = setFavoriteListSelection(favoriteDialogDepartmentId, selected);
+  syncFavoriteViews(lists);
+  scheduleUpdate();
+  closeFavoriteDialog();
+}
+
 function renderCards(rows) {
   if (!rows.length) {
     els.cards.replaceChildren(emptyMessage("条件に一致する高校がありません。"));
@@ -840,7 +1111,8 @@ function createCard(row, index) {
   const naishinLabel = row["内申点_app_display"] || row["内申点"] || row["内申点_classification"] || "-";
   const addressLabel = formatAddressWithFounded(row);
   const mapsUrl = buildMapsUrl(row);
-  const isFav = loadFavorites().has(row.department_id);
+  const isFav = isInAnyFavoriteList(row.department_id);
+  const favoriteButtonLabel = `${row["高校名"]} ${row["学科名"]}`;
 
   card.innerHTML = `
     <div class="card-top">
@@ -860,7 +1132,8 @@ function createCard(row, index) {
         </button>
         <button type="button" class="icon-btn fav-btn${isFav ? " is-fav" : ""}"
           data-fav-school="${escapeHtml(row.department_id)}"
-          aria-label="${isFav ? "お気に入り解除" : "お気に入りに追加"}"
+          data-fav-school-label="${escapeAttribute(favoriteButtonLabel)}"
+          aria-label="お気に入りを編集"
           aria-pressed="${isFav}">
           <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" class="fav-star-shape"/>

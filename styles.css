@@ -79,6 +79,10 @@ button.text-button:hover {
   text-underline-offset: 0.18em;
 }
 
+button.danger-text {
+  color: var(--danger);
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -226,6 +230,75 @@ h1 {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.85rem;
+}
+
+.filter-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.filter-tab {
+  min-height: 38px;
+  border-color: var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.filter-tab.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.filter-tab-panel[hidden] {
+  display: none;
+}
+
+.favorite-editor {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.favorite-editor-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.favorite-list-editor {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.favorite-editor-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+  align-items: end;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf8;
+}
+
+.favorite-name-field {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.favorite-count {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .notice {
@@ -713,6 +786,88 @@ select {
   opacity: 0.15;
 }
 
+.favorite-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 60px rgb(28 36 32 / 0.22);
+}
+
+.favorite-dialog::backdrop {
+  background: rgb(28 36 32 / 0.48);
+}
+
+.favorite-dialog-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.dialog-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.dialog-header h2 {
+  font-size: 1.1rem;
+}
+
+.dialog-header .icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.dialog-subtitle {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.favorite-dialog-lists {
+  display: grid;
+  gap: 0.45rem;
+  max-height: min(48vh, 24rem);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.favorite-dialog-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf8;
+  cursor: pointer;
+}
+
+.favorite-dialog-option input {
+  width: 1.2rem;
+  min-height: 0;
+  height: 1.2rem;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.favorite-dialog-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 #map {
   height: min(720px, calc(100vh - 2rem));
   min-height: 420px;
@@ -892,6 +1047,15 @@ select {
 
   .data-item strong {
     font-size: 0.92rem;
+  }
+
+  .favorite-editor-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .favorite-editor-item .danger-text {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   #map {

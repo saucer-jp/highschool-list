@@ -9,7 +9,7 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
   </head>
   <body>
     <a class="skip-link" href="#results">結果へ移動</a>
@@ -38,13 +38,17 @@
 
       <aside class="filter-panel" id="filterPanel" aria-label="絞り込み条件">
         <div class="filter-panel-header">
-          <h2>絞り込み</h2>
+          <h2 id="filterPanelTitle">絞り込み</h2>
           <div class="filter-panel-actions">
             <button type="button" id="resetButton" class="text-button">条件をリセット</button>
             <button type="button" id="filterCloseButton" class="secondary">閉じる</button>
           </div>
         </div>
-        <form id="filters" class="filters" autocomplete="off">
+        <div class="filter-tabs" role="tablist" aria-label="絞り込みエリア">
+          <button type="button" id="filterTabFilters" class="filter-tab is-active" role="tab" aria-selected="true" aria-controls="filters" data-filter-panel-tab="filters">絞り込み</button>
+          <button type="button" id="filterTabFavorites" class="filter-tab" role="tab" aria-selected="false" aria-controls="favoriteEditorPanel" data-filter-panel-tab="favorites">お気に入り編集</button>
+        </div>
+        <form id="filters" class="filters filter-tab-panel" role="tabpanel" aria-labelledby="filterTabFilters" autocomplete="off" data-filter-panel="filters">
           <div class="field field-wide">
             <label for="q">キーワード</label>
             <input id="q" name="q" type="search" placeholder="高校名・学科・住所" enterkeyhint="search">
@@ -72,9 +76,9 @@
           </div>
           <div class="field field-wide">
             <span class="field-label">お気に入り</span>
-            <div class="check-group" id="favGroup">
-              <label class="check-chip"><input type="checkbox" name="favOnly" id="favOnly"><span>★ お気に入りのみ</span></label>
+            <div class="check-group" id="favGroup" aria-live="polite">
             </div>
+            <input type="checkbox" name="favOnly" id="favOnly" hidden>
           </div>
           <div class="field-row">
             <div class="field">
@@ -135,6 +139,12 @@
             </div>
           </div>
         </form>
+        <section id="favoriteEditorPanel" class="favorite-editor filter-tab-panel" role="tabpanel" aria-labelledby="filterTabFavorites" data-filter-panel="favorites" hidden>
+          <div class="favorite-editor-actions">
+            <button type="button" id="addFavoriteListButton" class="secondary">お気に入りを追加</button>
+          </div>
+          <div id="favoriteListEditor" class="favorite-list-editor" aria-live="polite"></div>
+        </section>
       </aside>
 
       <section class="content-pane" id="contentPane">
@@ -171,10 +181,31 @@
       <p>学校座標の出典: GSI住所検索。郵便番号検索の出典: 「位置参照情報ダウンロードサービス」（国土交通省）を加工して作成。HeartRails Geo API を利用。</p>
     </footer>
 
+    <dialog id="favoriteDialog" class="favorite-dialog" aria-labelledby="favoriteDialogTitle">
+      <form method="dialog" class="favorite-dialog-form">
+        <div class="dialog-header">
+          <div>
+            <h2 id="favoriteDialogTitle">お気に入りを選択</h2>
+            <p id="favoriteDialogSchool" class="dialog-subtitle"></p>
+          </div>
+          <button type="button" id="favoriteDialogClose" class="icon-btn" aria-label="閉じる">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4-6.3-6.3-6.3 6.3-1.4-1.4L9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3 1.4 1.4Z"/>
+            </svg>
+          </button>
+        </div>
+        <div id="favoriteDialogLists" class="favorite-dialog-lists"></div>
+        <div class="dialog-actions">
+          <button type="button" id="favoriteDialogCancel" class="secondary">キャンセル</button>
+          <button type="button" id="favoriteDialogSave">保存</button>
+        </div>
+      </form>
+    </dialog>
+
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""></script>
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
   </body>
 </html>
