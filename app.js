@@ -456,6 +456,7 @@ function normalizeRow(row) {
   const lat = toNumber(row["代表点緯度"]);
   const lng = toNumber(row["代表点経度"]);
   const founded = toNumber(row["創立年_西暦"]);
+  const universityRate = toNumber(row["大学進学率"]);
 
   return {
     ...row,
@@ -466,6 +467,7 @@ function normalizeRow(row) {
     lat,
     lng,
     founded,
+    universityRate,
     postalAreaLabel: row["代表点ラベル"],
     searchable: [
       row["高校名"],
@@ -764,6 +766,7 @@ function createCard(row, index) {
 
   const distance = distanceFromPostal(row);
   const naishinLabel = row["内申点_app_display"] || row["内申点"] || row["内申点_classification"] || "-";
+  const addressLabel = formatAddressWithFounded(row);
   const mapsUrl = buildMapsUrl(row);
   const isFav = loadFavorites().has(row.department_id);
 
@@ -774,7 +777,7 @@ function createCard(row, index) {
           <h3>${escapeHtml(row["高校名"])}</h3>
           <span class="kana">${escapeHtml(row["高校名かな"])}</span>
         </div>
-        <p class="school-address">${escapeHtml(row["住所"])}</p>
+        <p class="school-address">${escapeHtml(addressLabel)}</p>
       </div>
       <div class="card-actions">
         <button type="button" class="icon-btn map-focus" data-focus-school="${escapeHtml(row.school_id)}" aria-label="地図で見る">
@@ -803,12 +806,13 @@ function createCard(row, index) {
       <div class="data-item"><span>偏差値</span><strong>${formatNumber(row.deviation)}</strong></div>
       <div class="data-item"><span>内申点</span><strong class="data-value-truncate" title="${escapeAttribute(naishinLabel)}">${escapeHtml(naishinLabel)}</strong></div>
       <div class="data-item"><span>距離</span><strong>${Number.isFinite(distance) ? `${distance.toFixed(1)} km` : "-"}</strong></div>
-      <div class="data-item"><span>創立</span><strong>${Number.isFinite(row.founded) ? `${Math.round(row.founded)}年` : "-"}</strong></div>
+      <div class="data-item"><span>大学進学率</span><strong>${formatPercent(row.universityRate)}</strong></div>
     </div>
     <div class="sources">
       ${linkHtml(row["Webサイト"], "公式")}
       ${linkHtml(row["偏差値出典"], "偏差出典")}
       ${linkHtml(row["内申点_source_url"] || row["内申点出典"], "内申出典")}
+      ${linkHtml(row["大学進学率_source_url"], "進学出典")}
       <a class="button-link" href="${escapeAttribute(mapsUrl)}" target="_blank" rel="noopener">Google Map</a>
     </div>
   `;
@@ -931,8 +935,18 @@ function averageNumbers(values) {
   return nums.length ? nums.reduce((sum, value) => sum + value, 0) / nums.length : NaN;
 }
 
+function formatAddressWithFounded(row) {
+  const address = row["住所"] || "";
+  if (!Number.isFinite(row.founded)) return address;
+  return `${address} (${Math.round(row.founded)}年創立)`;
+}
+
 function formatNumber(value) {
   return Number.isFinite(value) ? String(Math.round(value * 10) / 10) : "-";
+}
+
+function formatPercent(value) {
+  return Number.isFinite(value) ? `${formatNumber(value)}%` : "-";
 }
 
 function escapeHtml(value) {
