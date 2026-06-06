@@ -30,6 +30,10 @@ const stateKeys = [
 const FAV_KEY = "highschool_favorites";
 const FAV_LISTS_KEY = "highschool_favorite_lists";
 const FAVORITE_SHARE_HASH_KEY = "f";
+const FAVORITE_SHARE_LIST_PREFIX = "l:";
+const FAVORITE_SHARE_LIST_SEPARATOR = ";";
+const FAVORITE_SHARE_FIELD_SEPARATOR = "~";
+const FAVORITE_SHARE_ID_SEPARATOR = ".";
 const DEFAULT_FAVORITE_LIST_ID = "default";
 const DEFAULT_FAVORITE_LIST_NAME = "お気に入り";
 const FAVORITE_COLORS = [
@@ -144,68 +148,161 @@ function isInAnyFavoriteList(departmentId) {
   return getFavoriteListSelection(departmentId).length > 0;
 }
 
+let favoriteShareIdByDepartmentId = new Map();
+let departmentIdByFavoriteShareId = new Map();
+
+function buildFavoriteShareIdMaps(rows = allRows) {
+  favoriteShareIdByDepartmentId = new Map();
+  departmentIdByFavoriteShareId = new Map();
+
+  for (const row of rows) {
+    const departmentId = String(row.department_id || "");
+    const shareId = String(row.share_id || "").trim();
+    if (!departmentId || !shareId) continue;
+    favoriteShareIdByDepartmentId.set(departmentId, shareId);
+    departmentIdByFavoriteShareId.set(shareId, departmentId);
+  }
+}
+
+function toFavoriteShareId(departmentId) {
+  const id = String(departmentId || "");
+  return favoriteShareIdByDepartmentId.get(id) ?? id;
+}
+
+function toFavoriteDepartmentId(shareId) {
+  const id = String(shareId || "");
+  return departmentIdByFavoriteShareId.get(id) ?? id;
+}
+
 function getAllFavoriteDepartmentIds(lists = loadFavoriteLists()) {
   return [...new Set(lists.flatMap((list) => list.schoolIds).map(String).filter(Boolean))];
 }
 
-function encodeFavoriteShareHash(departmentIds) {
-  const uniqueIds = [...new Set(departmentIds.map(String).filter(Boolean))];
-  if (!uniqueIds.length) return "";
+function favoriteColorIndex(color) {
+  const index = FAVORITE_COLORS.findIndex((c) => c.value === normalizeFavoriteColor(color));
+  return Math.max(0, index);
+}
+
+function encodeFavoriteShareName(name) {
+  const value = String(name || "");
+  try {
+    const bytes = new TextEncoder().encode(value);
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  } catch {
+    return encodeURIComponent(value).replace(/~/g, "%7E");
+  }
+}
+
+function decodeFavoriteShareName(name) {
+  const value = String(name || "");
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    // Fall back for older links created with percent-encoded names.
+  }
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "";
+  }
+}
+
+function encodeFavoriteShareLists(lists = loadFavoriteLists()) {
+  const sharedLists = normalizeFavoriteLists(lists);
+  if (!sharedLists.length) return "";
+
+  const segments = sharedLists.map((list) => {
+    const name = encodeFavoriteShareName(list.name);
+    const color = favoriteColorIndex(list.color).toString(36);
+    const ids = [...new Set(list.schoolIds.map(toFavoriteShareId).filter(Boolean))].join(FAVORITE_SHARE_ID_SEPARATOR);
+    return [name, color, ids].join(FAVORITE_SHARE_FIELD_SEPARATOR);
+  });
+
   const params = new URLSearchParams();
-  params.set(FAVORITE_SHARE_HASH_KEY, uniqueIds.join("."));
+  params.set(FAVORITE_SHARE_HASH_KEY, `${FAVORITE_SHARE_LIST_PREFIX}${segments.join(FAVORITE_SHARE_LIST_SEPARATOR)}`);
   return params.toString();
 }
 
 function parseFavoriteShareHash(hash = location.hash) {
   const value = String(hash || "").replace(/^#/, "");
-  if (!value) return [];
+  if (!value) return { lists: [], departmentIds: [] };
   const params = new URLSearchParams(value);
-  const encodedIds = params.get(FAVORITE_SHARE_HASH_KEY);
-  if (!encodedIds) return [];
-  return [...new Set(encodedIds.split(".").map((id) => id.trim()).filter(Boolean))];
+  const payload = params.get(FAVORITE_SHARE_HASH_KEY);
+  if (!payload) return { lists: [], departmentIds: [] };
+
+  if (payload.startsWith(FAVORITE_SHARE_LIST_PREFIX)) {
+    const segments = payload.slice(FAVORITE_SHARE_LIST_PREFIX.length).split(FAVORITE_SHARE_LIST_SEPARATOR);
+    const lists = segments.map((segment, index) => {
+      const [encodedName, colorIndex, encodedIds] = segment.split(FAVORITE_SHARE_FIELD_SEPARATOR);
+      const name = decodeFavoriteShareName(encodedName).trim() || `${DEFAULT_FAVORITE_LIST_NAME}${index + 1}`;
+      const color = FAVORITE_COLORS[parseInt(colorIndex || "0", 36)]?.value ?? DEFAULT_FAVORITE_COLOR;
+      const schoolIds = [...new Set(String(encodedIds || "")
+        .split(FAVORITE_SHARE_ID_SEPARATOR)
+        .map((id) => toFavoriteDepartmentId(id.trim()))
+        .filter(Boolean))];
+      return { id: index === 0 ? DEFAULT_FAVORITE_LIST_ID : createFavoriteListId(), name, schoolIds, color };
+    });
+    return { lists, departmentIds: getAllFavoriteDepartmentIds(lists) };
+  }
+
+  const departmentIds = [...new Set(payload
+    .split(FAVORITE_SHARE_ID_SEPARATOR)
+    .map((id) => toFavoriteDepartmentId(id.trim()))
+    .filter(Boolean))];
+  return {
+    lists: departmentIds.length ? [{
+      id: DEFAULT_FAVORITE_LIST_ID,
+      name: DEFAULT_FAVORITE_LIST_NAME,
+      schoolIds: departmentIds,
+      color: DEFAULT_FAVORITE_COLOR,
+    }] : [],
+    departmentIds,
+  };
 }
 
 function clearFavoriteShareHash() {
-  if (!parseFavoriteShareHash(location.hash).length) return;
+  if (!parseFavoriteShareHash(location.hash).lists.length) return;
   history.replaceState(null, "", `${location.pathname}${location.search}`);
 }
 
-function mergeFavoriteShareIds(departmentIds) {
-  const ids = new Set(departmentIds.map(String).filter(Boolean));
-  if (!ids.size) return { lists: loadFavoriteLists(), addedCount: 0 };
-
+function mergeFavoriteShareLists(importLists) {
   const lists = loadFavoriteLists();
-  const defaultList = lists.find((list) => list.id === DEFAULT_FAVORITE_LIST_ID) ?? lists[0];
-  const existing = new Set(getAllFavoriteDepartmentIds(lists));
-  const addedCount = [...ids].filter((id) => !existing.has(id)).length;
+  const nextLists = [...lists];
 
-  let nextLists;
-  if (defaultList) {
-    nextLists = lists.map((list) => {
-      if (list.id !== defaultList.id) return list;
-      return { ...list, schoolIds: [...new Set([...list.schoolIds, ...ids])] };
-    });
-  } else {
-    nextLists = [{
-      id: DEFAULT_FAVORITE_LIST_ID,
-      name: DEFAULT_FAVORITE_LIST_NAME,
-      schoolIds: [...ids],
-      color: DEFAULT_FAVORITE_COLOR,
-    }];
+  for (const importList of importLists) {
+    const schoolIds = [...new Set(importList.schoolIds.map(String).filter(Boolean))];
+    const target = nextLists.find((list) => list.name === importList.name);
+    if (target) {
+      target.schoolIds = [...new Set([...target.schoolIds, ...schoolIds])];
+    } else {
+      nextLists.push({
+        id: createFavoriteListId(),
+        name: importList.name,
+        schoolIds,
+        color: normalizeFavoriteColor(importList.color),
+      });
+    }
   }
 
-  return { lists: saveFavoriteLists(nextLists), addedCount };
+  const importedCount = getAllFavoriteDepartmentIds(importLists).length;
+  return { lists: saveFavoriteLists(nextLists), importedCount };
 }
 
-function replaceFavoriteShareIds(departmentIds) {
-  const ids = [...new Set(departmentIds.map(String).filter(Boolean))];
-  const lists = saveFavoriteLists([{
-    id: DEFAULT_FAVORITE_LIST_ID,
-    name: DEFAULT_FAVORITE_LIST_NAME,
-    schoolIds: ids,
-    color: DEFAULT_FAVORITE_COLOR,
-  }]);
-  return { lists, count: ids.length };
+function replaceFavoriteShareLists(importLists) {
+  const lists = saveFavoriteLists(importLists.map((list, index) => ({
+    ...list,
+    id: index === 0 ? DEFAULT_FAVORITE_LIST_ID : createFavoriteListId(),
+    schoolIds: [...new Set(list.schoolIds.map(String).filter(Boolean))],
+    color: normalizeFavoriteColor(list.color),
+  })));
+  return { lists, count: getAllFavoriteDepartmentIds(lists).length };
 }
 
 // カードに適用するお気に入り色（複数所属時は編集タブの並びで先頭のリストを採用）
@@ -349,6 +446,7 @@ async function init() {
       return response.text();
     });
     allRows = parseCsv(csv).map(normalizeRow);
+    buildFavoriteShareIdMaps(allRows);
     populateFilters();
     const favoriteShareStatus = await restoreFavoritesFromShareHash();
     applyState(readStateFromUrl());
@@ -1099,43 +1197,48 @@ function getSelectedFavoriteListIds() {
 }
 
 async function restoreFavoritesFromShareHash() {
-  const sharedIds = parseFavoriteShareHash();
-  if (!sharedIds.length) return null;
+  const sharedFavorites = parseFavoriteShareHash();
+  if (!sharedFavorites.lists.length) return null;
 
   const validIds = new Set(allRows.map((row) => String(row.department_id)));
-  const importIds = sharedIds.filter((id) => validIds.has(id));
-  if (!importIds.length) {
+  const importLists = sharedFavorites.lists.map((list) => ({
+    ...list,
+    schoolIds: list.schoolIds.filter((id) => validIds.has(id)),
+  }));
+  const importCount = getAllFavoriteDepartmentIds(importLists).length;
+
+  if (!importLists.length) {
     clearFavoriteShareHash();
     return { message: "共有リンクのお気に入り情報を読み取れませんでした。", isError: true };
   }
 
-  const action = await chooseFavoriteImportAction(importIds.length);
+  const action = await chooseFavoriteImportAction(importCount, importLists.length);
   if (action === "merge") {
-    const result = mergeFavoriteShareIds(importIds);
+    const result = mergeFavoriteShareLists(importLists);
     syncFavoriteViews(result.lists);
     clearFavoriteShareHash();
-    return { message: `共有リンクから${result.addedCount}件のお気に入りを追加しました。`, isError: false };
+    return { message: `共有リンクから${importLists.length}個のリスト、${result.importedCount}件のお気に入りを追加しました。`, isError: false };
   }
 
   if (action === "replace") {
-    const result = replaceFavoriteShareIds(importIds);
+    const result = replaceFavoriteShareLists(importLists);
     syncFavoriteViews(result.lists);
     clearFavoriteShareHash();
-    return { message: `共有リンクのお気に入り${result.count}件に置き換えました。`, isError: false };
+    return { message: `共有リンクの${result.lists.length}個のリスト、${result.count}件のお気に入りに置き換えました。`, isError: false };
   }
 
   clearFavoriteShareHash();
   return { message: "共有リンクのお気に入りを読み込まずに開きました。", isError: false };
 }
 
-function chooseFavoriteImportAction(count) {
+function chooseFavoriteImportAction(count, listCount = 1) {
   if (!els.favoriteImportDialog || typeof els.favoriteImportDialog.showModal !== "function") {
     const shouldMerge = window.confirm(`共有リンクに${count}件のお気に入りがあります。現在のお気に入りに追加しますか？`);
     return Promise.resolve(shouldMerge ? "merge" : "ignore");
   }
 
   els.favoriteImportDialogMessage.textContent =
-    `${count}件のお気に入りが共有リンクに含まれています。現在のお気に入りへ追加するか、置き換えるか選んでください。`;
+    `${listCount}個のリスト、${count}件のお気に入りが共有リンクに含まれています。現在のお気に入りへ追加するか、置き換えるか選んでください。`;
 
   return new Promise((resolve) => {
     const controller = new AbortController();
@@ -1685,8 +1788,11 @@ async function copyCurrentUrl() {
   const shareUrl = buildFavoriteShareUrl();
   try {
     await copyTextToClipboard(shareUrl);
-    const count = getAllFavoriteDepartmentIds().length;
-    setStatus(count ? `お気に入り${count}件の共有リンクをコピーしました。` : "お気に入りがないため、通常のURLをコピーしました。");
+    const lists = loadFavoriteLists();
+    const count = getAllFavoriteDepartmentIds(lists).length;
+    setStatus(lists.length
+      ? `${lists.length}個のリスト、${count}件のお気に入り共有リンクをコピーしました。`
+      : "お気に入りリストがないため、通常のURLをコピーしました。");
   } catch {
     setStatus("クリップボードへコピーできませんでした。", true);
   }
@@ -1717,7 +1823,7 @@ async function copyTextToClipboard(text) {
 
 function buildFavoriteShareUrl() {
   const url = new URL(location.href);
-  url.hash = encodeFavoriteShareHash(getAllFavoriteDepartmentIds());
+  url.hash = encodeFavoriteShareLists();
   return url.toString();
 }
 
