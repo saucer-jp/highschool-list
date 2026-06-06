@@ -29,6 +29,7 @@ const stateKeys = [
 // ---------- お気に入り (localStorage) ----------
 const FAV_KEY = "highschool_favorites";
 const FAV_LISTS_KEY = "highschool_favorite_lists";
+const FAVORITE_SHARE_HASH_KEY = "f";
 const DEFAULT_FAVORITE_LIST_ID = "default";
 const DEFAULT_FAVORITE_LIST_NAME = "お気に入り";
 const FAVORITE_COLORS = [
@@ -141,6 +142,70 @@ function setFavoriteListSelection(departmentId, selectedListIds) {
 
 function isInAnyFavoriteList(departmentId) {
   return getFavoriteListSelection(departmentId).length > 0;
+}
+
+function getAllFavoriteDepartmentIds(lists = loadFavoriteLists()) {
+  return [...new Set(lists.flatMap((list) => list.schoolIds).map(String).filter(Boolean))];
+}
+
+function encodeFavoriteShareHash(departmentIds) {
+  const uniqueIds = [...new Set(departmentIds.map(String).filter(Boolean))];
+  if (!uniqueIds.length) return "";
+  const params = new URLSearchParams();
+  params.set(FAVORITE_SHARE_HASH_KEY, uniqueIds.join("."));
+  return params.toString();
+}
+
+function parseFavoriteShareHash(hash = location.hash) {
+  const value = String(hash || "").replace(/^#/, "");
+  if (!value) return [];
+  const params = new URLSearchParams(value);
+  const encodedIds = params.get(FAVORITE_SHARE_HASH_KEY);
+  if (!encodedIds) return [];
+  return [...new Set(encodedIds.split(".").map((id) => id.trim()).filter(Boolean))];
+}
+
+function clearFavoriteShareHash() {
+  if (!parseFavoriteShareHash(location.hash).length) return;
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+}
+
+function mergeFavoriteShareIds(departmentIds) {
+  const ids = new Set(departmentIds.map(String).filter(Boolean));
+  if (!ids.size) return { lists: loadFavoriteLists(), addedCount: 0 };
+
+  const lists = loadFavoriteLists();
+  const defaultList = lists.find((list) => list.id === DEFAULT_FAVORITE_LIST_ID) ?? lists[0];
+  const existing = new Set(getAllFavoriteDepartmentIds(lists));
+  const addedCount = [...ids].filter((id) => !existing.has(id)).length;
+
+  let nextLists;
+  if (defaultList) {
+    nextLists = lists.map((list) => {
+      if (list.id !== defaultList.id) return list;
+      return { ...list, schoolIds: [...new Set([...list.schoolIds, ...ids])] };
+    });
+  } else {
+    nextLists = [{
+      id: DEFAULT_FAVORITE_LIST_ID,
+      name: DEFAULT_FAVORITE_LIST_NAME,
+      schoolIds: [...ids],
+      color: DEFAULT_FAVORITE_COLOR,
+    }];
+  }
+
+  return { lists: saveFavoriteLists(nextLists), addedCount };
+}
+
+function replaceFavoriteShareIds(departmentIds) {
+  const ids = [...new Set(departmentIds.map(String).filter(Boolean))];
+  const lists = saveFavoriteLists([{
+    id: DEFAULT_FAVORITE_LIST_ID,
+    name: DEFAULT_FAVORITE_LIST_NAME,
+    schoolIds: ids,
+    color: DEFAULT_FAVORITE_COLOR,
+  }]);
+  return { lists, count: ids.length };
 }
 
 // カードに適用するお気に入り色（複数所属時は編集タブの並びで先頭のリストを採用）
@@ -285,8 +350,10 @@ async function init() {
     });
     allRows = parseCsv(csv).map(normalizeRow);
     populateFilters();
+    const favoriteShareStatus = await restoreFavoritesFromShareHash();
     applyState(readStateFromUrl());
     await update({ preserveUrl: true });
+    if (favoriteShareStatus) setStatus(favoriteShareStatus.message, favoriteShareStatus.isError);
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -314,6 +381,11 @@ function cacheElements() {
   els.favoriteDialogClose = document.getElementById("favoriteDialogClose");
   els.favoriteDialogCancel = document.getElementById("favoriteDialogCancel");
   els.favoriteDialogSave = document.getElementById("favoriteDialogSave");
+  els.favoriteImportDialog = document.getElementById("favoriteImportDialog");
+  els.favoriteImportDialogMessage = document.getElementById("favoriteImportDialogMessage");
+  els.favoriteImportMerge = document.getElementById("favoriteImportMerge");
+  els.favoriteImportReplace = document.getElementById("favoriteImportReplace");
+  els.favoriteImportIgnore = document.getElementById("favoriteImportIgnore");
   els.filterPanelTabs = document.querySelectorAll("[data-filter-panel-tab]");
   els.filterPanelPanels = document.querySelectorAll("[data-filter-panel]");
   els.filters      = document.getElementById("filters");
@@ -1026,6 +1098,70 @@ function getSelectedFavoriteListIds() {
   return [...els.favGroup.querySelectorAll('input[name="favList"]:checked')].map((cb) => cb.value);
 }
 
+async function restoreFavoritesFromShareHash() {
+  const sharedIds = parseFavoriteShareHash();
+  if (!sharedIds.length) return null;
+
+  const validIds = new Set(allRows.map((row) => String(row.department_id)));
+  const importIds = sharedIds.filter((id) => validIds.has(id));
+  if (!importIds.length) {
+    clearFavoriteShareHash();
+    return { message: "共有リンクのお気に入り情報を読み取れませんでした。", isError: true };
+  }
+
+  const action = await chooseFavoriteImportAction(importIds.length);
+  if (action === "merge") {
+    const result = mergeFavoriteShareIds(importIds);
+    syncFavoriteViews(result.lists);
+    clearFavoriteShareHash();
+    return { message: `共有リンクから${result.addedCount}件のお気に入りを追加しました。`, isError: false };
+  }
+
+  if (action === "replace") {
+    const result = replaceFavoriteShareIds(importIds);
+    syncFavoriteViews(result.lists);
+    clearFavoriteShareHash();
+    return { message: `共有リンクのお気に入り${result.count}件に置き換えました。`, isError: false };
+  }
+
+  clearFavoriteShareHash();
+  return { message: "共有リンクのお気に入りを読み込まずに開きました。", isError: false };
+}
+
+function chooseFavoriteImportAction(count) {
+  if (!els.favoriteImportDialog || typeof els.favoriteImportDialog.showModal !== "function") {
+    const shouldMerge = window.confirm(`共有リンクに${count}件のお気に入りがあります。現在のお気に入りに追加しますか？`);
+    return Promise.resolve(shouldMerge ? "merge" : "ignore");
+  }
+
+  els.favoriteImportDialogMessage.textContent =
+    `${count}件のお気に入りが共有リンクに含まれています。現在のお気に入りへ追加するか、置き換えるか選んでください。`;
+
+  return new Promise((resolve) => {
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    let resolved = false;
+
+    function finish(action) {
+      if (resolved) return;
+      resolved = true;
+      controller.abort();
+      if (els.favoriteImportDialog.open) els.favoriteImportDialog.close();
+      resolve(action);
+    }
+
+    els.favoriteImportMerge.addEventListener("click", () => finish("merge"), options);
+    els.favoriteImportReplace.addEventListener("click", () => finish("replace"), options);
+    els.favoriteImportIgnore.addEventListener("click", () => finish("ignore"), options);
+    els.favoriteImportDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      finish("ignore");
+    }, options);
+    els.favoriteImportDialog.addEventListener("close", () => finish("ignore"), options);
+    els.favoriteImportDialog.showModal();
+  });
+}
+
 // --- State 読み書き ---
 
 function readStateFromUrl() {
@@ -1546,12 +1682,43 @@ function setStatus(message, isError = false) {
 }
 
 async function copyCurrentUrl() {
+  const shareUrl = buildFavoriteShareUrl();
   try {
-    await navigator.clipboard.writeText(location.href);
-    setStatus("共有URLをコピーしました。");
+    await copyTextToClipboard(shareUrl);
+    const count = getAllFavoriteDepartmentIds().length;
+    setStatus(count ? `お気に入り${count}件の共有リンクをコピーしました。` : "お気に入りがないため、通常のURLをコピーしました。");
   } catch {
-    setStatus("クリップボードへコピーできませんでした。アドレスバーのURLを共有してください。", true);
+    setStatus("クリップボードへコピーできませんでした。", true);
   }
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall back for browsers that deny async clipboard access.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+  document.body.append(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("copy failed");
+}
+
+function buildFavoriteShareUrl() {
+  const url = new URL(location.href);
+  url.hash = encodeFavoriteShareHash(getAllFavoriteDepartmentIds());
+  return url.toString();
 }
 
 function emptyMessage(message) {

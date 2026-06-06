@@ -23,12 +23,12 @@
           type="button"
           id="copyUrlButton"
           class="icon-btn header-copy-btn"
-          aria-label="共有URLをコピー"
-          title="共有URLをコピー">
+          aria-label="お気に入り共有リンクをコピー"
+          title="お気に入り共有リンクをコピー">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1Zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H10V7h9v14Z"/>
           </svg>
-          <span class="sr-only">共有URLをコピー</span>
+          <span class="sr-only">お気に入り共有リンクをコピー</span>
         </button>
       </div>
     </header>
@@ -207,10 +207,26 @@
       </form>
     </dialog>
 
+    <dialog id="favoriteImportDialog" class="favorite-dialog" aria-labelledby="favoriteImportDialogTitle">
+      <form method="dialog" class="favorite-dialog-form">
+        <div class="dialog-header">
+          <div>
+            <h2 id="favoriteImportDialogTitle">共有リンクのお気に入り</h2>
+            <p id="favoriteImportDialogMessage" class="dialog-subtitle"></p>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="favoriteImportIgnore" class="secondary">無視する</button>
+          <button type="button" id="favoriteImportReplace" class="secondary">置き換える</button>
+          <button type="button" id="favoriteImportMerge">追加する</button>
+        </div>
+      </form>
+    </dialog>
+
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""></script>
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=10"></script>
   </body>
 </html>
